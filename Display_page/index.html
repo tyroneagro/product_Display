@@ -1,1 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tyrone Products - Insecticides List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f9fdf9;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 100, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-placeholder {
+           
+            background-color:;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(46, 125, 50, 0.2);
+        }
+        
+        .company-name {
+            color: #2e7d32;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .page-title {
+            text-align: center;
+            padding: 40px 0 20px;
+            color: #1b5e20;
+        }
+        
+        .page-title h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .page-title h1:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background-color: #4caf50;
+            border-radius: 2px;
+        }
+        
+        .page-title p {
+            color: #666;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 20px auto 0;
+        }
+        
+        /* Product List Styles */
+        .products-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 100, 0, 0.08);
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+        
+        .product-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1px;
+            background-color: #f0f0f0;
+        }
+        
+        .product-item {
+            background-color: white;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
+        
+        .product-item:hover {
+            background-color: #f5fff5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 100, 0, 0.1);
+        }
+        
+        .product-number {
+            background-color: #2e7d32;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .product-name {
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        /* Stats Section */
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 30px 0 40px;
+            gap: 20px;
+        }
+        
+        .stat-box {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0, 100, 0, 0.08);
+            border-top: 5px solid #4caf50;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        /* Footer Styles */
+        footer {
+            background-color: #1b5e20;
+            color: white;
+            padding: 40px 0 20px;
+            margin-top: 40px;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .footer-section {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .footer-section h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .footer-section h3:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: #4caf50;
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+        
+        .footer-links a {
+            color: #e0f2e0;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+            padding-left: 5px;
+        }
+        
+        .copyright {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0f2e0;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .product-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .page-title h1 {
+                font-size: 2rem;
+            }
+            
+            .stats {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .product-item {
+                padding: 15px;
+            }
+            
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-container">
+                    <div class="logo-placeholder">
+                        <img src="logo.png" alt="Tyrone Agro Logo" width="200" height="70">
+                        
+                    </div>
+                    <div class="company-name">TYRONE AGRO PRODUCTS</div>
+                </div>
+                <div class="contact-info">
+                    <p><i class="fas fa-phone"></i> +91 98796 56784</p>
+                    <p><i class="fas fa-envelope"></i> impexp@tyroneagro.com</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <section class="page-title">
+            <h1>Product List</h1>
+            <p>Comprehensive list of all Product available from Tyrone Agro. All products are manufactured to the highest quality standards for effective crop protection.</p>
+        </section>
+        
+        <section class="stats">
+            <div class="stat-box">
+                <div class="stat-number">304</div>
+                <div class="stat-label">Total Products</div>
+            </div>
+        </section>
+        
+        <section class="products-container">
+            <div class="product-list" id="productList">
+                <!-- Product items will be inserted here by JavaScript -->
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Tyrone Agrochemicals Private Limited</h3>
+                    <p>Leading manufacturer of agricultural insecticides, fungicides, herbicide and PGR since 2020. Committed to sustainable farming and innovation.</p>
+                </div>
+                <div class="footer-section">
+                    
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> Jay Ashapura Industrial Estate, Plot No. 11&12, Behind Rudanagar Transport 150 Feet Ring Road, Ahmedabad Highway, Anandpar, Navagam, Rajkot, Gujarat 360003</p>
+                    <p><i class="fas fa-phone"></i> +91 98796 56784</p>
+                    <p><i class="fas fa-envelope"></i> impexp@tyroneagro.com</p>
+                </div>
+            </div>
+            <div class="copyright">
+                
+            </div>
+        </div>
+    </footer>
 
+    <script>
+        // Product data extracted from the PDF
+        const products = [
+            "2,4-D Amine Salt 58% SL",
+            "2,4-D-Amine salt 22.5% S.L.",
+            "2,4-D Ethyl Ester 38% EC (Having 2,4-D, Acid 34% W/W)",
+            "2,4-D Sodium salt 44% + Metribuzin 35% + Pyrazosulfuron ethyl 1.0 % WDG",
+            "AbamECitin 1.9% EC",
+            "Aceplate 75 % SP",
+            "Aceplate 45% + Cypermethrin 5 % DF",
+            "Aceplate 50% + Bifenthrin 10% WDG",
+            "Aceplate 50% + Imidacloprid 1.8% SP",
+            "Acetaminid 20% SP",
+            "Aceplate 50% + Fipronil 5% WDG",
+            "Alphacypermethrin 10% EC",
+            "Alpha Naphlyl Acetic Acid 4.5% SL",
+            "Aluminium PhoSPhide 15 % Tablet",
+            "Aluminium PhoSPhide 56% (F) Tablet",
+            "Ammonium Salt Of Glyphosate 71% SG",
+            "Ametryn 80% WG",
+            "Atrazine 50% WP",
+            "Azoxystrobin 11% + Tebuconazole 18.3% W/W SC",
+            "Azoxystrobin 11.5% + Mancoreb 30% W/W WP",
+            "Azoxystrobin 18.2% + Difenoconazole 11.4% SC",
+            "Azoxystrobin 23% SC",
+            "Azoxystrobin 7.1% + Propiconazole 11.9 % W/W SE",
+            "Azoxystrobin 8.3% + Mancoreb 66.7% WG",
+            "AZOXYSTROBIN 4.8% w/w + CHLOROTHALONIL 40.0% w/w SC",
+            "AZOXYSTROBIN 16.7 % + TRICYCLAZOLE 33.3% SC",
+            "Azoxystrobin 2.5% + Thiophanate methyl 11.25% + Thiamethoxam 25% FS",
+            "Benfuracarb 40% EC",
+            "Bensulfuron Methyl O.6 % + Pretilachlor 6 % GR (Ready mix)",
+            "BENTAZONE 480 g/l SL",
+            "Betacylthurin 8.49% w/w + Imidacloprid 19.81% w/w OD",
+            "Benzpyrimoxan 10% SC",
+            "Bifenthrin 10% EC",
+            "Bifenthrin 8% SC",
+            "BIENTHRIN 8.8% CS",
+            "BIENTHRIN 3% + CHLORPYRIPHOS 30% EC",
+            "BISPYribac Sodium 10% W/V SC",
+            "BISPYRIBAC SODIUM 20% + PYRAZOSULFURON ETHYL 15% WDG",
+            "Bitertanol 25% WP",
+            "Buproferin 20%+ Aceplate 50% (W/W) WP",
+            "BUPROFEZIN 9% + ACEPHATE 24% WP",
+            "Buproferin 22% + Fipronil 3% SC",
+            "Buproferin 25% SC",
+            "Captan 50% WP",
+            "Captan 70%+ Hexaconazole 5% WP",
+            "Carbendazim 25 % + Flusilazole 12.5% SE",
+            "Carbendazim 1.92% + Mancoreb 10.08% GR",
+            "Carbendazim 12% + Mancoreb 63% WP",
+            "CARBENDAZIM 25% + MANCOZEB 50% WS",
+            "Carbendazim 46.27% SC",
+            "Carbendazim 50% WP",
+            "Carbofuran 3% CG",
+            "Carboxin 37.5% + Thiram 37.5% WS",
+            "Carfentrazone-ethyl 0.43% + Glyphosate 30.82% EW",
+            "Carpropamid 27.8% SC",
+            "Cartap - Hydrochloride 4% GR",
+            "Cartap Hydrochloride 4% + Fipronil 0.5% CG",
+            "Chlorantraniliprole 0.4% W/W GR",
+            "Chlorantraniliprole 18.5% w/w SC",
+            "Chlorantraniliprole 4.3% W/W + AbamECitin 1.7% W/W SC",
+            "Chlorantraniliprole 8.8% + Thiamethoxam 17.5% SC",
+            "Chlorantraniliprole 9.3% + Lambdacylhalothrin 4.6% ZC",
+            "Chlorfenapyr 10% SC",
+            "Chlorimuron Ethyl 25% WP",
+            "Chlorothalonil 75% WP",
+            "Chromequat Chloride 50% Sol.",
+            "Chlorpyrifos 16% + Alphacypermethrin 1% E.C",
+            "Chlorpyrifos 35% + Fipronil 3.5% W/W EC",
+            "Chlorpyrifos 50% EC",
+            "Chlorpyriphos 10% GR",
+            "Chlorpyriphos 20% EC",
+            "Chlorpyriphos 48% W/W EC",
+            "Chlorpyriphos 50% + Cypermethrin 5% EC",
+            "CIMMETHYLIN 10% FC",
+            "Clodinafop Propagyl 9% + Metribuzin 20% WP",
+            "Clodinafop Propargyl 15% + Metsulfuron Methyl 1% WP",
+            "Clodinafop - Propargyl 15% WP",
+            "Clothianidin 50 % WG",
+            "Copper Oxychloride Containing Copper Contents 50.00% W/W WP",
+            "Copper Sulphate 47.15% + Mancozeb 30% WDG",
+            "Cyanrtaniliprole 10.26% w/w OD",
+            "CYANTRANILIPROLE 19.8% + THIAMETHOXAM 19.8% FS",
+            "Cynalofop Butyl 10 % EC",
+            "Cymoxanil 50% WP",
+            "Cymoxanil 8% + Mancozeb 64% WP",
+            "Cypermethrin 10% E.C.",
+            "Cypermethrin 25% EC",
+            "Cypermethrin 3% + Quinalphos 20% EC",
+            "Deltamethrin 1.8% EC",
+            "Deltamethrin 11% EC",
+            "Deltamethrin 2.5% WP",
+            "Deltamethrin 2.8% EC",
+            "Diaferithuron 40.1% + Acetamiprid 3.9% WP",
+            "Diaferithuron 47% + Bifenthrin 9.4% SC",
+            "Diaferithuron 50% WP",
+            "Diclosulan 84% WG",
+            "Difenoconazole 25% EC",
+            "Diffubenzuron 25 % W.P",
+            "Dimethoate 30% EC",
+            "Dimethomorph 50% WP",
+            "Dinotefuran 15% + Pymetrozine 45% WG",
+            "Dinotefuran 20% W/W SG",
+            "Ditthanon 75% WP",
+            "Dodine 65% WP",
+            "EmamECitin 1.5 % + Fipronil 3.5 % SC",
+            "EmamECitin Benzoate 1.9 % EC",
+            "EmamECitin Benzoate 3.0% + Thiamethoxam 12.0% WG",
+            "EmamECitin Benzoate 5 % SG",
+            "Ethephon 39% SL",
+            "Ethion 40% + Cypermethrin 5% EC",
+            "Etofenprox 10% EC",
+            "Famoxadone 16.6%+ Cymoxanil 22.1% SC",
+            "Fenazaguin 10% EC",
+            "Fenazaguin 18.3% SC",
+            "Fenazaguin 10% + Bifenthrin 4% EC",
+            "Fenobucarb (B.P.M.C) 50% EC",
+            "Fenobucarb (BPMC) 20% + Buprofezin 5% SE",
+            "Fenoxaprop-P-Ethyl 9.3 % EC",
+            "Fenoxaprop-p-ethyl 6.7% w/w EC",
+            "Fenpropathrin 10% EC",
+            "Fenpyroximate 5% EC",
+            "Ferwalerate 0.4 % DP",
+            "Ferwalerate 20% EC",
+            "Feruxaprop-P-Ethyl 7.77% + Metribuzin 13.6% W/W EC",
+            "Fipronil 0.6 % GR",
+            "Fipronil 18.87% SC",
+            "Fipronil 2.92% w/w EC",
+            "FIPRONIL 7% + HEXITHAZOX 2% SC",
+            "Fipronil 4% W/W + Thiamethoxam 4% W/W SC",
+            "Fipronil 40% + Imidacloprid 40% WG",
+            "Fipronil 5% SC",
+            "Fipronil 80 % WG",
+            "Flonicamid 50% WG",
+            "Fluazifop-p-butyl 13.4% EC",
+            "FLUBENDIAMIDE 0.7% GR",
+            "FLUBENDIAMIDE 20% WG",
+            "Flubendiamide 39.35 % m/m SC",
+            "Flubendiamide 4% w/w + Buprofenzin 20% w/w SC",
+            "FLUBENDIAMIDE 8.33% + DELTAMETHRIN 5.56% SC",
+            "Flubendiamide 3.5% + Hexaconazole 5% WG",
+            "Flubendiamide 19.92% + Thiacloprid 19.92% w/w SC",
+            "FLUOPICOLIDE 5.56% + PROPAMOCARB HYDROCHLORIDE 55.6% SC",
+            "Fluopyram 34.48 % w/w SC",
+            "FLUOPYRAM 17.7 % + TEBUCONAZOLE 17.7 % SC",
+            "Flusilazole 40% EC",
+            "Forchlorfenuroni (CPPU) 0.1% w/v liquid",
+            "Fosetyl-Al 80% WP",
+            "Gibberalic Acid 0.001% L",
+            "Gibberalic Acid 0.186 % SP",
+            "Gibberelic Acid 40% WGG",
+            "Glufosinate Ammonium 13.5 % w/w SL",
+            "Glyphosate 41% SL",
+            "Haloxyfop R Methyl Ester 10.5% EC",
+            "Hexaconazole 4% Carbendazim 16% SC",
+            "Hexaconazole 5% + Validamycin 2.5% SC",
+            "Hexaconazole 4%+ Zineb 68% WP",
+            "Hexaconazole 5% EC",
+            "Hexaconazole 5% SC",
+            "Hexaconazole 75% WG",
+            "Hexaconazole 0.5% GR",
+            "Hexythiazox 5.45% EC",
+            "Imazethapyr 10 % SL",
+            "Imidacloprid 17.8% SL",
+            "Imidacloprid 0.3% GR",
+            "Imidacloprid 35% SC",
+            "Imidacloprid 21% w/w + Beta-cyfluthrin 10.5% w/w SC",
+            "Imidacloprid 18.5% + Hexaconazole 1.5%FS",
+            "Imidacloprid 30.5% SC",
+            "Imidacloprid 48% FS",
+            "Imidacloprid 6% + Lambda Cyhalothrin 4% SL",
+            "Indoxacarb 14.5 SC",
+            "IPA Salt of Glyphosate 54% SL",
+            "IPRODIONE 25% + CARBENDAZIM 25% WP",
+            "Iprovalicarb 5.5% + Propineb 61.25% WP",
+            "ISOPROTHIOLANE 28% + FIPRONIL 5% EC",
+            "Isoprothiolane 40 % EC",
+            "Isoproturon 50% W.P",
+            "Isoproturon 75% W.P",
+            "Kasugamycin 3% S.L",
+            "Kasugamycin 5% + Copper Oxychloride 45% WP",
+            "Kitaźne - 48 % EC",
+            "Kresokin-Methyl 44.3% W/W (500 G/L) SC",
+            "Lambda-Cyhalothrin 10 % WP",
+            "Lambda-Cyhalothrin 5 % EC",
+            "Lambda-Cyhalothrin 4.9% CS",
+            "LAMBDA-CYHALOTHRIN 2.43% CS",
+            "Line Sulphur 22% SC",
+            "Lufenuron 5.4% EC",
+            "Mancozeb 75% WP",
+            "Mancozeb 80% W/W WP",
+            "Mandipropamid 23.4% SC",
+            "Mepiquat Chloride 5 % Aqueous Solution",
+            "Metalaxyl 35% WS",
+            "Metalaxyl-M 3.3% + Chlorothalonil 33.1% SC",
+            "Metalaxyl 8% + Mancozeb 64% WP",
+            "Methomyl 40% SP",
+            "Metribuzin 42% + Clodinafop Propagyl 12% WG",
+            "Metribuzin 70% WP",
+            "Metitram 55% + Pyradostrobin 5% WG",
+            "Metsulfuron Methyl 20% WP",
+            "Metsulfuron methyl 10% w/w + Carfentrazone ethyl 40% w/w DF",
+            "Metsulfuron Methyl 10% w/w + Chlorimuron Ethyl 10% WP",
+            "Myclobutanil 10 % WP",
+            "Neem Extract Concentrate Containing Azadirachitin 10% W/W Min.",
+            "Neem Oil BaSEd EC Containing Azadirachitin 0.03% ( 300 Ppm) Min.",
+            "Neem Seed Kernel BaSEd EC Containing Azadirachitin- 1% (10000 Ppm) Min",
+            "Novaluron 5.25% + EmamECtin Benzoate 0.9% W/W SC",
+            "Novaluron 10% FC",
+            "Novaluron 5.25% + Indoxacarb 4.5% W/W SC",
+            "Oxadlargyl 6% EC",
+            "Oxydemeton-Methyl-25% EC",
+            "Oxyflouffen 23.5% EC",
+            "Padobutrazole 23% SC",
+            "Padobutrazole 40% SC",
+            "Paraguate Dichloride 24% SL",
+            "Penconazole 10% EC",
+            "Pendimethalin 30% EC",
+            "Pendimethalin 38.7% CS",
+            "Pendimethalin 30% + Imarethapyr 2% EC",
+            "PENDIMETHALIN 38.4% + PYRAZOSULFURON ETHYL 0.85% ZC",
+            "PENFLUFEN 13.28% + TRIFLOXYSTROBIN 13.28% FS",
+            "PENOXSULAM 1% + PENDIMETHALIN 24% w/w SE",
+            "PENOXSULAM 0.97% + BUTACHLOR 38.8% SE",
+            "Phenthoate 50 % E.C",
+            "Phosalone 35% E.C",
+            "Picoxystrobin 22.52% SC",
+            "Picoxystrobin 6.78% W/W +Tricyclazole 20.33% W/W SC",
+            "Picoxystrobin 7.05% + Propiconazole 11.71% SC",
+            "Pinoxaden 5.1% EC",
+            "Pretilachlor 50% EC",
+            "Pretilachlor-30.7% EC",
+            "Profenofos 40% + Cypermethrin 4% EC",
+            "Profenofos 40% + Fenpyroximate 2.5% EC",
+            "Profenophos 50% EC",
+            "Propargite 42% + Hexythiazox 2% EC",
+            "Propargite 50% + Bifenthrin 5% SE",
+            "Propargite 57% EC",
+            "Propiconazole 13.9% W/W + Difencronazole 13.9% W/W EC",
+            "Propiconazole 25% EC",
+            "Propiconazole 10.7% + Tricyclazole 34.2% SE",
+            "Propineb 54.2% + Tricyclazole 15% WP",
+            "Propineb 70% WP",
+            "Propoxur 20% E.C.",
+            "Pymetroxine 50% WG",
+            "Pyradostrobin 20% WG",
+            "Pyrazosulfuron Ethyl 10% WP",
+            "Pyriproxyfen 0.5% GR",
+            "Pyriproxyfen 10% + Bifenthrin 10% EC",
+            "PYMPROXYFEN 5% + DIAFENTHURON 25% SE",
+            "Pyriproxyfen 5% + Fenpropathrin 15% EC",
+            "Pyriproxyfen 8% + Dinotefuran 5% + Diafenthuron 18% SC",
+            "Pyriproxyfen 10% FC",
+            "Pyrithiobac- Sodium 10 % EC",
+            "PYRITHIOBAC SODIUM 6% + QUIZALOFOP ETHYL 4% MEC",
+            "Quinalphos 25% EC",
+            "Quizalofop Ethyl 10% EC",
+            "Quizalofop Ethyl 10% EC + Chlorimuron Ethyl 25% WP",
+            "QUIZALOFOP ETHYL 7.5% + IMAZETHAPIR 15 % EC",
+            "Quizalofop Ethyl 4% + Oxyfluorfen 6% EC",
+            "SODIUM PARA-NITRO PHENOLATE 0.3 % SL",
+            "Spinosad 45% SC",
+            "Spiromesifen 22.9% SC",
+            "Spirotetramat 11.01 % + Imidactoprid 11.01% SC",
+            "SULFENTRAZONE 39.6 % w/w SC",
+            "Sulfentrazone 28% + Clomazone 30% WP",
+            "Sulphur 40% SC",
+            "Sulphur 55.16% SC",
+            "Sulphur 80% WDG",
+            "Tebuconazole 10% + Sulphur 65% WG",
+            "Tebuconazole 2% DS",
+            "Tebuconazole 25.9% EC",
+            "Tebuconazole 38.39% SC",
+            "Tebuconazole 25% WG",
+            "Tebuconazole 5.36% w/w FS",
+            "Tebuconazole 6.7% + Captan 26.9% W/W SC",
+            "Tebuconazole 50% + Trifloxystrobin 25% WG",
+            "Tembotrione 34.4% w/w SC",
+            "Temephos 50% EC",
+            "Thiacloprid 21.7% SC",
+            "THIAMETHOXAN 1.0% + CHLORANTRANILIPROLE 0.5% GR",
+            "Thiamethoxan 0.9% + Fipronil 0.2% GR",
+            "Thiamethoxan 12.6% +Lambda-Cyhalothrin 9.5% ZC",
+            "Thiamethoxan 25% WG",
+            "Thiamethoxan 30% FS",
+            "Thiamethoxan 75% SG",
+            "Thifluzamide 24 % SC",
+            "THIOCCYCLAM HYDROGEN OXALATE 50% SP",
+            "Thiophanate Methyl 70% WP",
+            "THIOPHANATE METHYL 450 g/l + PYRACLOSTROBIN 50 g/l (w/v) FS",
+            "Thiran 40% FS",
+            "Topramezone 336 g/l SC",
+            "Tolfenpyrad 15%EC",
+            "Triacontanol 0.1% EW",
+            "Triadimefon-25% W.P.",
+            "Tricyclazole 18% +Mancozeb 62% WP",
+            "Tricyclazole 45% + Hexaconazole 10% WG",
+            "TRICYCLAZOLE 20.4% w/w + AZOXYSTROBIN 6.8% w/w SC",
+            "TRICYCLAZOLE 18.0% + TERUCONAZOLE 14.4% SC",
+            "Tricyclazole 75% WP",
+            "TRIFLUMEZOPYRIM 10% w/w SC",
+            "Validamycin 3 % SL",
+            "Zinc Phosphide 1% Bait",
+            "Zinc Phosphide 2% RB",
+            "Zinc Phosphide 80% W/W"
+        ];
+
+        // Function to render product list
+        function renderProductList() {
+            const productListContainer = document.getElementById('productList');
+            
+            products.forEach((product, index) => {
+                const productItem = document.createElement('div');
+                productItem.className = 'product-item';
+                
+                productItem.innerHTML = `
+                    <div class="product-number">${index + 1}</div>
+                    <div class="product-name">${product}</div>
+                `;
+                
+                productListContainer.appendChild(productItem);
+            });
+        }
+
+        // Initialize the page when loaded
+        document.addEventListener('DOMContentLoaded', renderProductList);
+    </script>
+</body>
+</html>
