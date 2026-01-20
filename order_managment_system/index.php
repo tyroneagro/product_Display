@@ -1,1 +1,2052 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tyrone Agrochemicals - Order Management System</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 20px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    
+    .app {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* Header Styles */
+    .header {
+      background: linear-gradient(135deg, #1a5f23, #2d8c3a);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(30%, -30%);
+    }
+    
+    .header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
+    .company-name {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 4px;
+    }
+    
+    .header-subtitle {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+    
+    .two-col {
+      grid-template-columns: 1fr 400px;
+    }
+    
+    .three-col {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    /* Card Styles */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .card-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    input[readonly] {
+      background-color: #f8fafc;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+    
+    /* Button Styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #b91c1c;
+      transform: translateY(-1px);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .btn-outline:hover {
+      background: #f8fafc;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    .btn-icon {
+      padding: 8px;
+      width: 36px;
+      height: 36px;
+    }
+    
+    /* Badge Styles */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .badge-success {
+      background: #d1fae5;
+      color: var(--success);
+    }
+    
+    .badge-warning {
+      background: #fef3c7;
+      color: var(--warning);
+    }
+    
+    .badge-danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+    
+    .badge-primary {
+      background: #dbeafe;
+      color: var(--primary);
+    }
+    
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+    
+    th {
+      background: #f1f5f9;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    
+    tr:hover {
+      background: #f8fafc;
+    }
+    
+    /* Status Indicators */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .status-dot.pending {
+      background: var(--warning);
+    }
+    
+    .status-dot.completed {
+      background: var(--success);
+    }
+    
+    .status-dot.partial {
+      background: #3b82f6;
+    }
+    
+    /* Utility Classes */
+    .text-muted {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+    
+    .mt-1 { margin-top: 4px; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 12px; }
+    .mt-4 { margin-top: 16px; }
+    .mt-5 { margin-top: 20px; }
+    
+    .mb-1 { margin-bottom: 4px; }
+    .mb-2 { margin-bottom: 8px; }
+    .mb-3 { margin-bottom: 12px; }
+    .mb-4 { margin-bottom: 16px; }
+    .mb-5 { margin-bottom: 20px; }
+    
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-body {
+      padding: 24px;
+    }
+    
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    /* Report Card */
+    .report-card {
+      background: linear-gradient(135deg, #1a5f23, #2d8c3a);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .report-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .report-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    
+    .report-stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background: var(--success);
+      color: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+      z-index: 1001;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+    }
+    
+    .toast.show {
+      transform: translateX(0);
+    }
+    
+    .toast.error {
+      background: var(--danger);
+    }
+    
+    .toast.warning {
+      background: var(--warning);
+    }
+    
+    /* Print Styles for Report */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printReport, #printReport * {
+        visibility: visible;
+      }
+      #printReport {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <div class="header">
+      <h1>Order Management System</h1>
+      <div class="company-name">Tyrone Agrochemicals Private Limited</div>
+      <div class="header-subtitle">Streamlined Order Processing & Dispatch Management</div>
+    </div>
 
+    <!-- Main Grid -->
+    <div class="grid two-col">
+      <!-- Left Column -->
+      <div class="grid gap-4">
+        <!-- Master Data Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Master Data Management</h3>
+            <div class="status-indicator">
+              <span class="status-dot pending"></span>
+              <span class="text-muted">Ready</span>
+            </div>
+          </div>
+          
+          <div class="grid three-col gap-4">
+            <!-- Add Customer Form -->
+            <div>
+              <h4 class="mb-3">Add Customer</h4>
+              <div class="form-group">
+                <label>Company Name *</label>
+                <input type="text" id="cust_company" placeholder="Enter company name">
+              </div>
+              <div class="form-group">
+                <label>Contact Person *</label>
+                <input type="text" id="cust_contact" placeholder="Contact person name">
+              </div>
+              <div class="form-group">
+                <label>Phone Number *</label>
+                <input type="tel" id="cust_phone" placeholder="Phone number">
+              </div>
+              <div class="form-group">
+                <label>Address</label>
+                <textarea id="cust_address" rows="2" placeholder="Full address"></textarea>
+              </div>
+              <button class="btn btn-primary" id="addCustomer">
+                <span>➕ Add Customer</span>
+              </button>
+            </div>
+
+            <!-- Add Product Form -->
+            <div>
+              <h4 class="mb-3">Add Product</h4>
+              <div class="form-group">
+                <label>Party Name *</label>
+                <select id="prod_party">
+                  <option value="">Select Party</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Product Name *</label>
+                <input type="text" id="prod_name" placeholder="Enter product name">
+              </div>
+              <div class="form-group">
+                <label>Product Description</label>
+                <textarea id="prod_desc" rows="2" placeholder="Product description"></textarea>
+              </div>
+              <button class="btn btn-success" id="addProduct">
+                <span>📦 Add Product</span>
+              </button>
+            </div>
+
+            <!-- Quick View -->
+            <div>
+              <h4 class="mb-3">Quick Overview</h4>
+              <div class="card" style="background: #f8fafc; padding: 16px;">
+                <div class="mb-3">
+                  <div class="text-muted">Total Customers</div>
+                  <div id="totalCustomers" style="font-size: 24px; font-weight: 700; color: var(--primary);">0</div>
+                </div>
+                <div class="mb-3">
+                  <div class="text-muted">Total Products</div>
+                  <div id="totalProducts" style="font-size: 24px; font-weight: 700; color: var(--success);">0</div>
+                </div>
+                <div class="mb-3">
+                  <div class="text-muted">Active Parties</div>
+                  <div id="totalParties" style="font-size: 24px; font-weight: 700; color: var(--warning);">0</div>
+                </div>
+                <div>
+                  <div class="text-muted">System Status</div>
+                  <div style="font-size: 14px; color: var(--success); font-weight: 500;">✓ Operational</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Order Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Create New Order</h3>
+            <span class="badge badge-warning">Draft</span>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Order Number *</label>
+              <input type="text" id="order_number" placeholder="ORD-2024-001">
+            </div>
+            <div class="form-group">
+              <label>Order Date *</label>
+              <input type="text" id="order_date" readonly>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Customer *</label>
+              <select id="order_customer">
+                <option value="">Select Customer</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Expected Delivery</label>
+              <input type="date" id="order_delivery">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Special Instructions</label>
+            <textarea id="order_notes" rows="2" placeholder="Any special instructions..."></textarea>
+          </div>
+          
+          <h4 class="mb-3">Order Items</h4>
+          <div class="form-row mb-3">
+            <div class="form-group" style="flex: 2;">
+              <label>Select Product</label>
+              <select id="line_product">
+                <option value="">Select Customer First</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity (Boxes)</label>
+              <input type="number" id="line_qty" min="1" value="1">
+            </div>
+            <div class="form-group" style="align-self: flex-end;">
+              <button class="btn btn-primary" id="addLine">Add Item</button>
+            </div>
+          </div>
+          
+          <div class="table-container mb-3">
+            <table id="orderLinesTable">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Party</th>
+                  <th>Qty (Boxes)</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          
+          <div class="form-row" style="justify-content: space-between; align-items: center;">
+            <div>
+              <div class="text-muted">Total Items: <span id="totalItems">0</span></div>
+              <div style="font-size: 18px; font-weight: 700;">Total Boxes: <span id="totalBoxes">0</span></div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn btn-outline" id="clearOrder">Clear Draft</button>
+              <button class="btn btn-primary" id="saveOrder">Create Order</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders List Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Orders & Dispatch Management</h3>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <select id="filter_status" class="btn-outline" style="padding: 6px 12px;">
+                <option value="pending">Pending Orders</option>
+                <option value="all">All Orders</option>
+                <option value="completed">Completed</option>
+                <option value="partial">Partially Dispatched</option>
+              </select>
+              <input type="text" id="filter_text" placeholder="Search orders..." style="padding: 6px 12px;">
+            </div>
+          </div>
+          
+          <div id="ordersContainer" style="max-height: 400px; overflow-y: auto;">
+            <!-- Orders will be loaded here -->
+          </div>
+          
+          <div class="text-center mt-3">
+            <button class="btn btn-outline" id="refreshOrders">Refresh List</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="grid gap-4">
+        <!-- Professional Report Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Professional Reports</h3>
+            <button class="btn btn-success" id="generateReport">Generate Report</button>
+          </div>
+          
+          <div class="report-card">
+            <div class="report-stat">
+              <div>
+                <div class="report-stat-value" id="reportPendingOrders">0</div>
+                <div class="report-stat-label">Pending Orders</div>
+              </div>
+              <div>
+                <div class="report-stat-value" id="reportCompletedOrders">0</div>
+                <div class="report-stat-label">Completed Orders</div>
+              </div>
+            </div>
+            <div class="report-stat">
+              <div>
+                <div class="report-stat-value" id="reportRemainingBoxes">0</div>
+                <div class="report-stat-label">Remaining Boxes</div>
+              </div>
+              <div>
+                <div class="report-stat-value" id="reportTotalOrders">0</div>
+                <div class="report-stat-label">Total Orders</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <h4 class="mb-3">Today's Summary</h4>
+            <div id="dailyReport" style="max-height: 300px; overflow-y: auto;">
+              <!-- Report content will be loaded here -->
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <h4 class="mb-3">Top Performing Parties</h4>
+            <div id="topParties" style="max-height: 200px; overflow-y: auto;">
+              <!-- Top parties will be loaded here -->
+            </div>
+          </div>
+          
+          <hr class="mt-4 mb-4">
+          
+          <div>
+            <h4 class="mb-3">System Summary</h4>
+            <div id="summaryBox">
+              <!-- Summary will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Force Complete Modal -->
+  <div id="forceCompleteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin: 0;">Force Complete Order</h3>
+        <button class="btn btn-icon" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>This order still has <span id="remainingBoxesCount">0</span> boxes remaining.</p>
+        <div class="form-group">
+          <label>Completion Reason</label>
+          <select id="completeReason">
+            <option value="customer_cancelled">Customer Cancelled</option>
+            <option value="stock_unavailable">Stock Unavailable</option>
+            <option value="delivery_issues">Delivery Issues</option>
+            <option value="quality_issues">Quality Issues</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Additional Notes</label>
+          <textarea id="completeNotes" rows="3" placeholder="Provide details for forced completion..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="cancelComplete">Cancel</button>
+        <button class="btn btn-danger" id="confirmForceComplete">Force Complete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print Report Modal -->
+  <div id="printReportModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3 style="margin: 0;">Professional Order Report</h3>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" id="printReportBtn">🖨️ Print</button>
+          <button class="btn btn-icon" id="closePrintModal">✕</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="printReport">
+          <!-- Report content for printing -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Enhanced OMS System for Tyrone Agrochemicals
+    const LS = {
+      customers: 'tyrone_customers',
+      products: 'tyrone_products',
+      orders: 'tyrone_orders',
+      dispatches: 'tyrone_dispatches'
+    };
+
+    // Utility Functions
+    function uid(prefix = 'id') {
+      return prefix + Date.now().toString(36) + Math.floor(Math.random() * 9000 + 1000).toString(36);
+    }
+
+    function read(key) {
+      try {
+        return JSON.parse(localStorage.getItem(key) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function write(key, val) {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Master Data Management
+    function renderMasterData() {
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      
+      // Update counters
+      document.getElementById('totalCustomers').textContent = customers.length;
+      document.getElementById('totalProducts').textContent = products.length;
+      
+      // Count unique parties
+      const parties = [...new Set(products.map(p => p.party_id))];
+      document.getElementById('totalParties').textContent = parties.length;
+      
+      // Set current date
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('order_date').value = today;
+      
+      // Fill customer selects
+      const custSelect = document.getElementById('order_customer');
+      custSelect.innerHTML = '<option value="">Select Customer</option>' +
+        customers.map(c => `<option value="${c.id}">${c.company} (${c.contact})</option>`).join('');
+      
+      // Fill party select for products
+      const partySelect = document.getElementById('prod_party');
+      partySelect.innerHTML = '<option value="">Select Party</option>' +
+        customers.map(c => `<option value="${c.id}">${c.company}</option>`).join('');
+    }
+
+    // Customer Management - Simplified
+    document.getElementById('addCustomer').addEventListener('click', () => {
+      const company = document.getElementById('cust_company').value.trim();
+      const contact = document.getElementById('cust_contact').value.trim();
+      const phone = document.getElementById('cust_phone').value.trim();
+      
+      if (!company || !contact || !phone) {
+        showToast('Company name, contact person and phone are required', 'error');
+        return;
+      }
+      
+      const customers = read(LS.customers);
+      const newCustomer = {
+        id: uid('CUST'),
+        company,
+        contact,
+        phone,
+        address: document.getElementById('cust_address').value.trim(),
+        created_at: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      customers.push(newCustomer);
+      write(LS.customers, customers);
+      
+      // Clear form
+      ['cust_company', 'cust_contact', 'cust_phone', 'cust_address'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      
+      renderMasterData();
+      showToast('Customer added successfully');
+    });
+
+    // Product Management - Simplified
+    document.getElementById('addProduct').addEventListener('click', () => {
+      const partyId = document.getElementById('prod_party').value;
+      const name = document.getElementById('prod_name').value.trim();
+      
+      if (!partyId || !name) {
+        showToast('Party and product name are required', 'error');
+        return;
+      }
+      
+      const products = read(LS.products);
+      const newProduct = {
+        id: uid('PROD'),
+        party_id: partyId,
+        name,
+        description: document.getElementById('prod_desc').value.trim(),
+        created_at: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      products.push(newProduct);
+      write(LS.products, products);
+      
+      // Clear form
+      ['prod_name', 'prod_desc'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('prod_party').value = '';
+      
+      renderMasterData();
+      showToast('Product added successfully');
+    });
+
+    // Order Creation
+    let workingLines = [];
+    
+    function updateOrderSummary() {
+      let totalItems = 0;
+      let totalBoxes = 0;
+      
+      workingLines.forEach(line => {
+        totalItems++;
+        totalBoxes += line.qty;
+      });
+      
+      document.getElementById('totalItems').textContent = totalItems;
+      document.getElementById('totalBoxes').textContent = totalBoxes;
+    }
+    
+    function renderWorkingLines() {
+      const tbody = document.querySelector('#orderLinesTable tbody');
+      const products = read(LS.products);
+      const customers = read(LS.customers);
+      
+      tbody.innerHTML = '';
+      
+      workingLines.forEach((line, idx) => {
+        const product = products.find(p => p.id === line.product_id) || {};
+        const party = customers.find(c => c.id === product.party_id) || {};
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${product.name || ''}</td>
+          <td>${party.company || ''}</td>
+          <td>${line.qty}</td>
+          <td>
+            <button class="btn btn-danger btn-sm removeLine" data-idx="${idx}">Remove</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      // Bind remove buttons
+      document.querySelectorAll('.removeLine').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.dataset.idx);
+          workingLines.splice(idx, 1);
+          renderWorkingLines();
+          updateOrderSummary();
+        });
+      });
+      
+      updateOrderSummary();
+    }
+    
+    // Filter products by customer (party)
+    document.getElementById('order_customer').addEventListener('change', function() {
+      const customerId = this.value;
+      const productSelect = document.getElementById('line_product');
+      
+      if (!customerId) {
+        productSelect.innerHTML = '<option value="">Select Customer First</option>';
+        return;
+      }
+      
+      const products = read(LS.products);
+      const customerProducts = products.filter(p => p.party_id === customerId);
+      
+      productSelect.innerHTML = '<option value="">Select Product</option>' +
+        customerProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    });
+    
+    document.getElementById('addLine').addEventListener('click', () => {
+      const productId = document.getElementById('line_product').value;
+      const qty = parseInt(document.getElementById('line_qty').value);
+      
+      if (!productId || !qty || qty <= 0) {
+        showToast('Please select a product and enter quantity', 'error');
+        return;
+      }
+      
+      // Check if product already in order
+      const existingIndex = workingLines.findIndex(line => line.product_id === productId);
+      if (existingIndex > -1) {
+        workingLines[existingIndex].qty += qty;
+      } else {
+        workingLines.push({
+          id: uid('L'),
+          product_id: productId,
+          qty,
+          added_at: new Date().toISOString()
+        });
+      }
+      
+      renderWorkingLines();
+      document.getElementById('line_qty').value = '1';
+      showToast('Item added to order');
+    });
+    
+    document.getElementById('clearOrder').addEventListener('click', () => {
+      if (workingLines.length > 0 && !confirm('Clear all items from this order?')) return;
+      workingLines = [];
+      renderWorkingLines();
+      document.getElementById('order_number').value = '';
+      document.getElementById('order_notes').value = '';
+      document.getElementById('order_customer').value = '';
+      document.getElementById('order_delivery').value = '';
+      document.getElementById('line_product').innerHTML = '<option value="">Select Customer First</option>';
+      showToast('Order draft cleared');
+    });
+    
+    document.getElementById('saveOrder').addEventListener('click', () => {
+      const orderNumber = document.getElementById('order_number').value.trim();
+      const orderDate = document.getElementById('order_date').value;
+      const customerId = document.getElementById('order_customer').value;
+      
+      if (!orderNumber || !orderDate || !customerId) {
+        showToast('Order number and customer are required', 'error');
+        return;
+      }
+      
+      if (workingLines.length === 0) {
+        showToast('Add at least one item to the order', 'error');
+        return;
+      }
+      
+      const orders = read(LS.orders);
+      if (orders.find(o => o.order_number === orderNumber)) {
+        showToast('Order number must be unique', 'error');
+        return;
+      }
+      
+      const newOrder = {
+        id: uid('ORD'),
+        order_number: orderNumber,
+        customer_id: customerId,
+        order_date: orderDate,
+        delivery_date: document.getElementById('order_delivery').value || orderDate,
+        notes: document.getElementById('order_notes').value.trim(),
+        status: 'pending',
+        lines: JSON.parse(JSON.stringify(workingLines)),
+        created_at: new Date().toISOString(),
+        total_boxes: parseInt(document.getElementById('totalBoxes').textContent),
+        completed_at: null
+      };
+      
+      orders.push(newOrder);
+      write(LS.orders, orders);
+      
+      // Clear form
+      workingLines = [];
+      renderWorkingLines();
+      document.getElementById('order_number').value = '';
+      document.getElementById('order_notes').value = '';
+      document.getElementById('order_delivery').value = '';
+      document.getElementById('order_customer').value = '';
+      document.getElementById('line_product').innerHTML = '<option value="">Select Customer First</option>';
+      
+      renderOrders();
+      showToast('Order saved successfully');
+    });
+
+    // Orders Management
+    function computeRemainingForLine(order, line) {
+      const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+      const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+      return Math.max(0, Number(line.qty) - dispatched);
+    }
+    
+    function getOrderStatus(order) {
+      const lines = order.lines;
+      const totalDispatched = lines.reduce((sum, line) => {
+        const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+        return sum + dispatches.reduce((s, d) => s + Number(d.dispatched_boxes), 0);
+      }, 0);
+      
+      const totalOrdered = lines.reduce((sum, line) => sum + Number(line.qty), 0);
+      
+      if (totalDispatched === 0) return 'pending';
+      if (totalDispatched === totalOrdered) return 'completed';
+      return 'partial';
+    }
+    
+    function renderOrders() {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      const filter = document.getElementById('filter_status').value;
+      const search = document.getElementById('filter_text').value.trim().toLowerCase();
+      
+      const container = document.getElementById('ordersContainer');
+      container.innerHTML = '';
+      
+      const filteredOrders = orders.filter(order => {
+        const customer = customers.find(c => c.id === order.customer_id) || {};
+        const status = getOrderStatus(order);
+        
+        // Apply status filter
+        if (filter === 'pending' && status !== 'pending') return false;
+        if (filter === 'completed' && status !== 'completed') return false;
+        if (filter === 'partial' && status !== 'partial') return false;
+        
+        // Apply search filter
+        if (search) {
+          const matchesOrderNumber = order.order_number.toLowerCase().includes(search);
+          const matchesCustomer = customer.company.toLowerCase().includes(search) || 
+                                 (customer.contact && customer.contact.toLowerCase().includes(search));
+          return matchesOrderNumber || matchesCustomer;
+        }
+        
+        return true;
+      }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      if (filteredOrders.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted" style="padding: 40px;">No orders found</div>';
+        return;
+      }
+      
+      filteredOrders.forEach(order => {
+        const customer = customers.find(c => c.id === order.customer_id) || {};
+        const status = getOrderStatus(order);
+        const statusColors = {
+          pending: 'badge-warning',
+          completed: 'badge-success',
+          partial: 'badge-danger'
+        };
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '12px';
+        card.style.borderLeft = `4px solid ${status === 'completed' ? '#059669' : status === 'partial' ? '#3b82f6' : '#d97706'}`;
+        
+        // Calculate dispatch summary
+        let totalOrdered = 0;
+        let totalDispatched = 0;
+        let totalRemaining = 0;
+        
+        order.lines.forEach(line => {
+          const product = products.find(p => p.id === line.product_id) || {};
+          const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          const remaining = Math.max(0, line.qty - dispatched);
+          
+          totalOrdered += line.qty;
+          totalDispatched += dispatched;
+          totalRemaining += remaining;
+        });
+        
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <strong style="font-size: 16px;">${order.order_number}</strong>
+                <span class="badge ${statusColors[status]}" style="font-size: 11px;">
+                  ${status.toUpperCase()}
+                </span>
+              </div>
+              <div class="text-muted" style="margin-bottom: 8px;">
+                ${customer.company} • ${order.order_date}
+              </div>
+              <div style="display: flex; gap: 16px; font-size: 13px;">
+                <div>Ordered: <strong>${totalOrdered}</strong> boxes</div>
+                <div>Dispatched: <strong>${totalDispatched}</strong> boxes</div>
+                <div>Remaining: <strong>${totalRemaining}</strong> boxes</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              ${status !== 'completed' ? `
+                <button class="btn btn-success btn-sm completeOrder" data-orderid="${order.id}">
+                  Complete
+                </button>
+                <button class="btn btn-primary btn-sm showDispatch" data-orderid="${order.id}">
+                  Dispatch
+                </button>
+              ` : ''}
+              <button class="btn btn-outline btn-sm showDetail" data-orderid="${order.id}">
+                Details
+              </button>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+      
+      // Bind event listeners
+      document.querySelectorAll('.completeOrder').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const orderId = e.target.dataset.orderid;
+          const order = read(LS.orders).find(o => o.id === orderId);
+          const status = getOrderStatus(order);
+          
+          if (status === 'pending' || status === 'partial') {
+            showForceCompleteModal(order);
+          } else {
+            markOrderComplete(orderId);
+          }
+        });
+      });
+      
+      document.querySelectorAll('.showDispatch').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const orderId = e.target.dataset.orderid;
+          showDispatchModal(orderId);
+        });
+      });
+      
+      document.querySelectorAll('.showDetail').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const orderId = e.target.dataset.orderid;
+          showOrderDetail(orderId);
+        });
+      });
+      
+      updateSummary();
+    }
+    
+    function showForceCompleteModal(order) {
+      const modal = document.getElementById('forceCompleteModal');
+      const remainingBoxes = order.lines.reduce((sum, line) => {
+        return sum + computeRemainingForLine(order, line);
+      }, 0);
+      
+      document.getElementById('remainingBoxesCount').textContent = remainingBoxes;
+      modal.classList.add('active');
+      window.currentOrderId = order.id;
+    }
+    
+    function markOrderComplete(orderId, force = false, reason = '', notes = '') {
+      const orders = read(LS.orders);
+      const orderIndex = orders.findIndex(o => o.id === orderId);
+      
+      if (orderIndex === -1) return;
+      
+      orders[orderIndex].status = 'completed';
+      orders[orderIndex].completed_at = new Date().toISOString();
+      
+      if (force) {
+        orders[orderIndex].force_completed = true;
+        orders[orderIndex].completion_reason = reason;
+        orders[orderIndex].completion_notes = notes;
+        
+        // Add remaining boxes to dispatches as force-completed
+        const order = orders[orderIndex];
+        const dispatches = read(LS.dispatches);
+        
+        order.lines.forEach(line => {
+          const remaining = computeRemainingForLine(order, line);
+          if (remaining > 0) {
+            dispatches.push({
+              id: uid('D'),
+              order_id: orderId,
+              order_line_id: line.id,
+              dispatched_boxes: remaining,
+              dispatch_date: new Date().toISOString().slice(0, 10),
+              type: 'force_completed',
+              notes: `Force completed: ${reason}`,
+              created_at: new Date().toISOString()
+            });
+          }
+        });
+        
+        write(LS.dispatches, dispatches);
+      }
+      
+      write(LS.orders, orders);
+      renderOrders();
+      renderDailyReport();
+      
+      if (force) {
+        showToast('Order force completed');
+      } else {
+        showToast('Order marked as completed');
+      }
+    }
+    
+    // Modal handlers
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('forceCompleteModal').classList.remove('active');
+    });
+    
+    document.getElementById('cancelComplete').addEventListener('click', () => {
+      document.getElementById('forceCompleteModal').classList.remove('active');
+    });
+    
+    document.getElementById('confirmForceComplete').addEventListener('click', () => {
+      const reason = document.getElementById('completeReason').value;
+      const notes = document.getElementById('completeNotes').value.trim();
+      
+      markOrderComplete(window.currentOrderId, true, reason, notes);
+      document.getElementById('forceCompleteModal').classList.remove('active');
+      
+      // Clear modal fields
+      document.getElementById('completeNotes').value = '';
+    });
+    
+    function showDispatchModal(orderId) {
+      const order = read(LS.orders).find(o => o.id === orderId);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      
+      if (!order) return;
+      
+      const customer = customers.find(c => c.id === order.customer_id) || {};
+      let modalHTML = `
+        <div class="modal active" id="dispatchModal">
+          <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+              <h3 style="margin: 0;">Dispatch Order ${order.order_number}</h3>
+              <button class="btn btn-icon closeDispatchModal">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <strong>Customer:</strong> ${customer.company}<br>
+                <strong>Order Date:</strong> ${order.order_date}
+              </div>
+              <table style="width: 100%; margin-bottom: 20px;">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Ordered</th>
+                    <th>Dispatched</th>
+                    <th>Remaining</th>
+                    <th>Dispatch Now</th>
+                  </tr>
+                </thead>
+                <tbody>
+      `;
+      
+      order.lines.forEach(line => {
+        const product = products.find(p => p.id === line.product_id) || {};
+        const remaining = computeRemainingForLine(order, line);
+        
+        if (remaining > 0) {
+          modalHTML += `
+            <tr>
+              <td>${product.name}</td>
+              <td>${line.qty}</td>
+              <td>${line.qty - remaining}</td>
+              <td>${remaining}</td>
+              <td>
+                <input type="number" 
+                       min="1" 
+                       max="${remaining}" 
+                       value="${remaining}" 
+                       style="width: 80px; padding: 6px;"
+                       data-lineid="${line.id}"
+                       data-product="${product.name}">
+              </td>
+            </tr>
+          `;
+        }
+      });
+      
+      modalHTML += `
+                </tbody>
+              </table>
+              <div class="form-group">
+                <label>Dispatch Date</label>
+                <input type="date" id="dispatchDate" value="${new Date().toISOString().slice(0, 10)}">
+              </div>
+              <div class="form-group">
+                <label>LR Number (Optional)</label>
+                <input type="text" id="lrNumber" placeholder="Enter LR number">
+              </div>
+              <div class="form-group">
+                <label>Dispatch Notes</label>
+                <textarea id="dispatchNotes" rows="2" placeholder="Any dispatch notes..."></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-outline closeDispatchModal">Cancel</button>
+              <button class="btn btn-primary" id="saveDispatch">Save Dispatch</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Create and show modal
+      const modalDiv = document.createElement('div');
+      modalDiv.innerHTML = modalHTML;
+      document.body.appendChild(modalDiv);
+      
+      // Bind event listeners
+      modalDiv.querySelector('.closeDispatchModal').addEventListener('click', () => {
+        modalDiv.remove();
+      });
+      
+      modalDiv.querySelectorAll('.closeDispatchModal').forEach(btn => {
+        btn.addEventListener('click', () => {
+          modalDiv.remove();
+        });
+      });
+      
+      modalDiv.querySelector('#saveDispatch').addEventListener('click', () => {
+        const dispatchDate = modalDiv.querySelector('#dispatchDate').value;
+        const lrNumber = modalDiv.querySelector('#lrNumber').value.trim();
+        const notes = modalDiv.querySelector('#dispatchNotes').value.trim();
+        
+        const inputs = modalDiv.querySelectorAll('input[data-lineid]');
+        let hasDispatch = false;
+        
+        inputs.forEach(input => {
+          const qty = parseInt(input.value);
+          if (qty > 0) {
+            const dispatches = read(LS.dispatches);
+            dispatches.push({
+              id: uid('DISP'),
+              order_id: orderId,
+              order_line_id: input.dataset.lineid,
+              dispatched_boxes: qty,
+              dispatch_date: dispatchDate,
+              lr_number: lrNumber,
+              notes: notes,
+              product_name: input.dataset.product,
+              created_at: new Date().toISOString()
+            });
+            write(LS.dispatches, dispatches);
+            hasDispatch = true;
+          }
+        });
+        
+        if (hasDispatch) {
+          showToast('Dispatch recorded successfully');
+          renderOrders();
+          renderDailyReport();
+        }
+        
+        modalDiv.remove();
+      });
+    }
+    
+    function showOrderDetail(orderId) {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      const dispatches = read(LS.dispatches);
+      
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const customer = customers.find(c => c.id === order.customer_id) || {};
+      const status = getOrderStatus(order);
+      
+      let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Order Detail - ${order.order_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .company-header { background: #1a5f23; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+            .info-box { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+            .pending { background: #fff3cd; color: #856404; }
+            .completed { background: #d4edda; color: #155724; }
+            .partial { background: #cce5ff; color: #004085; }
+          </style>
+        </head>
+        <body>
+          <div class="company-header">
+            <h1>Tyrone Agrochemicals Private Limited</h1>
+            <h2>Order Detail Report</h2>
+          </div>
+          
+          <div class="header">
+            <h1>${order.order_number}</h1>
+            <div class="status-badge ${status}">${status.toUpperCase()}</div>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          </div>
+          
+          <div class="info-grid">
+            <div class="info-box">
+              <h3>Customer Information</h3>
+              <p><strong>Company:</strong> ${customer.company || 'N/A'}</p>
+              <p><strong>Contact:</strong> ${customer.contact || 'N/A'}</p>
+              <p><strong>Phone:</strong> ${customer.phone || 'N/A'}</p>
+              <p><strong>Address:</strong> ${customer.address || 'N/A'}</p>
+            </div>
+            
+            <div class="info-box">
+              <h3>Order Information</h3>
+              <p><strong>Order Date:</strong> ${order.order_date}</p>
+              <p><strong>Expected Delivery:</strong> ${order.delivery_date || 'N/A'}</p>
+              <p><strong>Created:</strong> ${new Date(order.created_at).toLocaleString()}</p>
+              ${order.completed_at ? `<p><strong>Completed:</strong> ${new Date(order.completed_at).toLocaleString()}</p>` : ''}
+              ${order.force_completed ? `<p><strong>Force Completed:</strong> Yes</p>` : ''}
+              ${order.completion_reason ? `<p><strong>Reason:</strong> ${order.completion_reason}</p>` : ''}
+              ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
+            </div>
+          </div>
+          
+          <h3>Order Items</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Party</th>
+                <th>Ordered Boxes</th>
+                <th>Dispatched Boxes</th>
+                <th>Remaining Boxes</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      order.lines.forEach(line => {
+        const product = products.find(p => p.id === line.product_id) || {};
+        const party = customers.find(c => c.id === product.party_id) || {};
+        const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+        const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+        const remaining = Math.max(0, line.qty - dispatched);
+        
+        html += `
+          <tr>
+            <td>${product.name || 'N/A'}</td>
+            <td>${party.company || 'N/A'}</td>
+            <td>${line.qty}</td>
+            <td>${dispatched}</td>
+            <td>${remaining}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+            </tbody>
+          </table>
+          
+          <h3>Dispatch History</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>LR Number</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      const orderDispatches = dispatches
+        .filter(d => d.order_id === order.id)
+        .sort((a, b) => new Date(b.dispatch_date) - new Date(a.dispatch_date));
+      
+      if (orderDispatches.length === 0) {
+        html += `<tr><td colspan="5" style="text-align: center;">No dispatches recorded</td></tr>`;
+      } else {
+        orderDispatches.forEach(dispatch => {
+          const product = products.find(p => p.id === dispatch.product_id) || {};
+          html += `
+            <tr>
+              <td>${dispatch.dispatch_date}</td>
+              <td>${dispatch.product_name || product.name || 'N/A'}</td>
+              <td>${dispatch.dispatched_boxes}</td>
+              <td>${dispatch.lr_number || 'N/A'}</td>
+              <td>${dispatch.notes || 'N/A'}</td>
+            </tr>
+          `;
+        });
+      }
+      
+      html += `
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+    }
+
+    // Professional Report Generation
+    function generateProfessionalReport() {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      const dispatches = read(LS.dispatches);
+      
+      const today = new Date().toISOString().split('T')[0];
+      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+      
+      // Calculate statistics
+      const totalOrders = orders.length;
+      const completedOrders = orders.filter(order => getOrderStatus(order) === 'completed').length;
+      const pendingOrders = orders.filter(order => {
+        const status = getOrderStatus(order);
+        return status === 'pending' || status === 'partial';
+      }).length;
+      
+      const totalRemainingBoxes = orders.reduce((sum, order) => {
+        return sum + order.lines.reduce((lineSum, line) => {
+          return lineSum + computeRemainingForLine(order, line);
+        }, 0);
+      }, 0);
+      
+      const totalDispatchedBoxes = dispatches.reduce((sum, dispatch) => sum + dispatch.dispatched_boxes, 0);
+      
+      // Get top parties
+      const partyStats = {};
+      orders.forEach(order => {
+        order.lines.forEach(line => {
+          const product = products.find(p => p.id === line.product_id);
+          if (product) {
+            const partyId = product.party_id;
+            const party = customers.find(c => c.id === partyId);
+            if (party) {
+              if (!partyStats[partyId]) {
+                partyStats[partyId] = {
+                  company: party.company,
+                  totalOrders: 0,
+                  totalBoxes: 0,
+                  pendingBoxes: 0
+                };
+              }
+              partyStats[partyId].totalOrders++;
+              partyStats[partyId].totalBoxes += line.qty;
+              partyStats[partyId].pendingBoxes += computeRemainingForLine(order, line);
+            }
+          }
+        });
+      });
+      
+      const topParties = Object.values(partyStats)
+        .sort((a, b) => b.totalOrders - a.totalOrders)
+        .slice(0, 5);
+      
+      // Generate report HTML
+      let reportHTML = `
+        <div id="printReport">
+          <div style="background: linear-gradient(135deg, #1a5f23, #2d8c3a); color: white; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+            <h1 style="margin: 0 0 10px 0; font-size: 32px;">Tyrone Agrochemicals Private Limited</h1>
+            <h2 style="margin: 0 0 20px 0; font-size: 24px; opacity: 0.9;">Order Management System Report</h2>
+            <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px;">
+              <div>
+                <div style="font-size: 14px;">Report Date</div>
+                <div style="font-size: 18px; font-weight: bold;">${today}</div>
+              </div>
+              <div>
+                <div style="font-size: 14px;">Month</div>
+                <div style="font-size: 18px; font-weight: bold;">${currentMonth}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 32px; font-weight: bold; color: #2563eb;">${totalOrders}</div>
+              <div style="color: #64748b; font-size: 14px;">Total Orders</div>
+            </div>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 32px; font-weight: bold; color: #059669;">${completedOrders}</div>
+              <div style="color: #64748b; font-size: 14px;">Completed Orders</div>
+            </div>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 32px; font-weight: bold; color: #d97706;">${pendingOrders}</div>
+              <div style="color: #64748b; font-size: 14px;">Pending Orders</div>
+            </div>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 32px; font-weight: bold; color: #dc2626;">${totalRemainingBoxes}</div>
+              <div style="color: #64748b; font-size: 14px;">Remaining Boxes</div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+            <div>
+              <h3 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Pending Orders Summary</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Order No.</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Customer</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Remaining</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+      `;
+      
+      // Add pending orders to report
+      const pendingOrdersList = orders.filter(order => {
+        const status = getOrderStatus(order);
+        return status === 'pending' || status === 'partial';
+      }).slice(0, 10); // Show top 10
+      
+      pendingOrdersList.forEach(order => {
+        const customer = customers.find(c => c.id === order.customer_id) || {};
+        const status = getOrderStatus(order);
+        const remainingBoxes = order.lines.reduce((sum, line) => {
+          return sum + computeRemainingForLine(order, line);
+        }, 0);
+        
+        reportHTML += `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${order.order_number}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${customer.company || 'N/A'}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${remainingBoxes} boxes</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+              <span style="padding: 4px 8px; border-radius: 12px; font-size: 12px; 
+                background: ${status === 'pending' ? '#fef3c7' : '#cce5ff'}; 
+                color: ${status === 'pending' ? '#92400e' : '#1e40af'}">
+                ${status.toUpperCase()}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+      
+      if (pendingOrdersList.length === 0) {
+        reportHTML += `
+          <tr>
+            <td colspan="4" style="padding: 20px; text-align: center; color: #64748b;">
+              No pending orders
+            </td>
+          </tr>
+        `;
+      }
+      
+      reportHTML += `
+                </tbody>
+              </table>
+            </div>
+            
+            <div>
+              <h3 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Top Performing Parties</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Party Name</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Total Orders</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Total Boxes</th>
+                    <th style="padding: 12px; background: #f1f5f9; text-align: left;">Pending</th>
+                  </tr>
+                </thead>
+                <tbody>
+      `;
+      
+      // Add top parties to report
+      topParties.forEach(party => {
+        reportHTML += `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${party.company}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${party.totalOrders}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${party.totalBoxes}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${party.pendingBoxes}</td>
+          </tr>
+        `;
+      });
+      
+      if (topParties.length === 0) {
+        reportHTML += `
+          <tr>
+            <td colspan="4" style="padding: 20px; text-align: center; color: #64748b;">
+              No party data available
+            </td>
+          </tr>
+        `;
+      }
+      
+      reportHTML += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Recent Completed Orders (Last 30 Days)</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="padding: 12px; background: #f1f5f9; text-align: left;">Order No.</th>
+                  <th style="padding: 12px; background: #f1f5f9; text-align: left;">Customer</th>
+                  <th style="padding: 12px; background: #f1f5f9; text-align: left;">Order Date</th>
+                  <th style="padding: 12px; background: #f1f5f9; text-align: left;">Completed Date</th>
+                  <th style="padding: 12px; background: #f1f5f9; text-align: left;">Total Boxes</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+      
+      // Add recent completed orders
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentCompleted = orders
+        .filter(order => {
+          if (getOrderStatus(order) !== 'completed') return false;
+          if (!order.completed_at) return false;
+          return new Date(order.completed_at) >= thirtyDaysAgo;
+        })
+        .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+        .slice(0, 10);
+      
+      recentCompleted.forEach(order => {
+        const customer = customers.find(c => c.id === order.customer_id) || {};
+        reportHTML += `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${order.order_number}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${customer.company || 'N/A'}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${order.order_date}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+              ${order.completed_at ? new Date(order.completed_at).toISOString().split('T')[0] : 'N/A'}
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${order.total_boxes || 0}</td>
+          </tr>
+        `;
+      });
+      
+      if (recentCompleted.length === 0) {
+        reportHTML += `
+          <tr>
+            <td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">
+              No completed orders in last 30 days
+            </td>
+          </tr>
+        `;
+      }
+      
+      reportHTML += `
+              </tbody>
+            </table>
+          </div>
+          
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 14px;">
+            <p>Report generated by Tyrone Agrochemicals Order Management System</p>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+            <p>Total dispatched boxes to date: ${totalDispatchedBoxes}</p>
+          </div>
+        </div>
+      `;
+      
+      // Show report in modal
+      const printReportDiv = document.getElementById('printReport');
+      printReportDiv.innerHTML = reportHTML;
+      
+      const modal = document.getElementById('printReportModal');
+      modal.classList.add('active');
+      
+      // Bind print button
+      document.getElementById('printReportBtn').addEventListener('click', () => {
+        window.print();
+      });
+      
+      document.getElementById('closePrintModal').addEventListener('click', () => {
+        modal.classList.remove('active');
+      });
+    }
+
+    // Reports Dashboard
+    function renderDailyReport() {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      
+      // Update report stats
+      const totalOrders = orders.length;
+      const completedOrders = orders.filter(order => getOrderStatus(order) === 'completed').length;
+      const pendingOrders = orders.filter(order => {
+        const status = getOrderStatus(order);
+        return status === 'pending' || status === 'partial';
+      }).length;
+      
+      const totalRemainingBoxes = orders.reduce((sum, order) => {
+        return sum + order.lines.reduce((lineSum, line) => {
+          return lineSum + computeRemainingForLine(order, line);
+        }, 0);
+      }, 0);
+      
+      document.getElementById('reportPendingOrders').textContent = pendingOrders;
+      document.getElementById('reportCompletedOrders').textContent = completedOrders;
+      document.getElementById('reportRemainingBoxes').textContent = totalRemainingBoxes;
+      document.getElementById('reportTotalOrders').textContent = totalOrders;
+      
+      // Render today's summary
+      const container = document.getElementById('dailyReport');
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get today's orders
+      const todaysOrders = orders.filter(order => order.order_date === today);
+      
+      if (todaysOrders.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted" style="padding: 20px;">No orders for today</div>';
+        return;
+      }
+      
+      let summaryHTML = '';
+      todaysOrders.forEach(order => {
+        const customer = customers.find(c => c.id === order.customer_id) || {};
+        const status = getOrderStatus(order);
+        const remainingBoxes = order.lines.reduce((sum, line) => {
+          return sum + computeRemainingForLine(order, line);
+        }, 0);
+        
+        summaryHTML += `
+          <div class="card" style="padding: 12px; margin-bottom: 8px; border-left: 3px solid ${status === 'completed' ? '#059669' : '#d97706'}">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${order.order_number}</strong>
+                <div class="text-muted" style="font-size: 12px;">${customer.company}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 14px; font-weight: 500;">${order.total_boxes || 0} boxes</div>
+                <div class="text-muted" style="font-size: 11px;">${remainingBoxes} remaining</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = summaryHTML;
+      
+      // Update top parties
+      updateTopParties();
+    }
+    
+    function updateTopParties() {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      
+      const partyStats = {};
+      orders.forEach(order => {
+        order.lines.forEach(line => {
+          const product = products.find(p => p.id === line.product_id);
+          if (product) {
+            const partyId = product.party_id;
+            const party = customers.find(c => c.id === partyId);
+            if (party) {
+              if (!partyStats[partyId]) {
+                partyStats[partyId] = {
+                  company: party.company,
+                  orderCount: 0
+                };
+              }
+              partyStats[partyId].orderCount++;
+            }
+          }
+        });
+      });
+      
+      const topParties = Object.values(partyStats)
+        .sort((a, b) => b.orderCount - a.orderCount)
+        .slice(0, 5);
+      
+      const container = document.getElementById('topParties');
+      container.innerHTML = '';
+      
+      if (topParties.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No party data</div>';
+        return;
+      }
+      
+      topParties.forEach(party => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.padding = '12px';
+        div.style.marginBottom = '8px';
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        
+        div.innerHTML = `
+          <div>
+            <strong style="font-size: 14px;">${party.company}</strong>
+          </div>
+          <span class="badge badge-primary" style="font-size: 12px;">
+            ${party.orderCount} orders
+          </span>
+        `;
+        
+        container.appendChild(div);
+      });
+    }
+    
+    function updateSummary() {
+      const orders = read(LS.orders);
+      const customers = read(LS.customers);
+      const products = read(LS.products);
+      
+      const pendingOrders = orders.filter(order => {
+        const status = getOrderStatus(order);
+        return status === 'pending' || status === 'partial';
+      });
+      
+      const totalRemaining = pendingOrders.reduce((sum, order) => {
+        return sum + order.lines.reduce((lineSum, line) => {
+          return lineSum + computeRemainingForLine(order, line);
+        }, 0);
+      }, 0);
+      
+      const summaryBox = document.getElementById('summaryBox');
+      summaryBox.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+          <div class="card" style="background: #f8fafc; padding: 16px;">
+            <div class="text-muted">Total Orders</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--primary);">${orders.length}</div>
+          </div>
+          <div class="card" style="background: #f8fafc; padding: 16px;">
+            <div class="text-muted">Pending Orders</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--warning);">${pendingOrders.length}</div>
+          </div>
+          <div class="card" style="background: #f8fafc; padding: 16px;">
+            <div class="text-muted">Remaining Boxes</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--danger);">${totalRemaining}</div>
+          </div>
+          <div class="card" style="background: #f8fafc; padding: 16px;">
+            <div class="text-muted">Total Products</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--success);">${products.length}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Event Listeners
+    document.getElementById('generateReport').addEventListener('click', () => {
+      generateProfessionalReport();
+      showToast('Professional report generated');
+    });
+    
+    document.getElementById('refreshOrders').addEventListener('click', () => {
+      renderOrders();
+      showToast('Orders list refreshed');
+    });
+
+    // Initialize
+    function initialize() {
+      // Set default dates
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('order_date').value = today;
+      document.getElementById('order_delivery').value = today;
+      
+      // Load initial data
+      renderMasterData();
+      renderOrders();
+      renderDailyReport();
+      
+      showToast('Tyrone Agrochemicals OMS loaded successfully');
+    }
+    
+    // Start the application
+    initialize();
+  </script>
+</body>
+</html>
