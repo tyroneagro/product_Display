@@ -794,23 +794,30 @@
       }
     }
 
-    async function write(sheet, obj) {
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sheet: sheet,
-            values: [JSON.stringify(obj)]
-          })
-        });
-        return true;
-      } catch (e) {
-        console.error(`Error writing to ${sheet}:`, e);
-        showToast(`Error saving to ${sheet}`, 'error');
-        return false;
-      }
-    }
+   function write(sheet, obj) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = API_URL;
+  form.style.display = "none";
+
+  const inputSheet = document.createElement("input");
+  inputSheet.name = "sheet";
+  inputSheet.value = sheet;
+
+  const inputData = document.createElement("input");
+  inputData.name = "data";
+  inputData.value = JSON.stringify(obj);
+
+  form.appendChild(inputSheet);
+  form.appendChild(inputData);
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+
+  return true;
+}
+
 
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
