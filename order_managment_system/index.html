@@ -794,10 +794,11 @@
       }
     }
 
-   function write(sheet, obj) {
+  function write(sheet, obj) {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = API_URL;
+  form.target = "hiddenFrame"; // 👈 THIS IS THE KEY
   form.style.display = "none";
 
   const inputSheet = document.createElement("input");
@@ -817,6 +818,7 @@
 
   return true;
 }
+
 
 
     function showToast(message, type = 'success') {
@@ -2082,5 +2084,6 @@
     // Start the application
     initialize();
   </script>
+  <iframe name="hiddenFrame" style="display:none;"></iframe>
 </body>
 </html>
