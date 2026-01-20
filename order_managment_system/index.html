@@ -771,28 +771,45 @@
 
   <script>
     // Enhanced OMS System for Tyrone Agrochemicals
-    const LS = {
-      customers: 'tyrone_customers',
-      products: 'tyrone_products',
-      orders: 'tyrone_orders',
-      dispatches: 'tyrone_dispatches'
-    };
+    const API_URL = "https://script.google.com/macros/s/AKfycbw_m1OJWig1rEpRbKzRvgmoE1K6hzfWtBzgdEsPdyszgzNuaEXkpHuSCoZ3zvxgeduUNg/exec";
 
     // Utility Functions
     function uid(prefix = 'id') {
       return prefix + Date.now().toString(36) + Math.floor(Math.random() * 9000 + 1000).toString(36);
     }
 
-    function read(key) {
+    // Google Sheet based functions
+    async function read(sheet) {
       try {
-        return JSON.parse(localStorage.getItem(key) || '[]');
+        const res = await fetch(API_URL + "?sheet=" + sheet);
+        if (!res.ok) throw new Error(`Failed to fetch ${sheet}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) return [];
+        data.shift(); // remove header row
+        return data.map(row => JSON.parse(row[0]));
       } catch (e) {
+        console.error(`Error reading ${sheet}:`, e);
+        showToast(`Error loading ${sheet}`, 'error');
         return [];
       }
     }
 
-    function write(key, val) {
-      localStorage.setItem(key, JSON.stringify(val));
+    async function write(sheet, obj) {
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sheet: sheet,
+            values: [JSON.stringify(obj)]
+          })
+        });
+        return true;
+      } catch (e) {
+        console.error(`Error writing to ${sheet}:`, e);
+        showToast(`Error saving to ${sheet}`, 'error');
+        return false;
+      }
     }
 
     function showToast(message, type = 'success') {
@@ -807,9 +824,9 @@
     }
 
     // Master Data Management
-    function renderMasterData() {
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function renderMasterData() {
+      const customers = await read("customers");
+      const products = await read("products");
       
       // Update counters
       document.getElementById('totalCustomers').textContent = customers.length;
@@ -835,7 +852,7 @@
     }
 
     // Customer Management - Simplified
-    document.getElementById('addCustomer').addEventListener('click', () => {
+    document.getElementById('addCustomer').addEventListener('click', async () => {
       const company = document.getElementById('cust_company').value.trim();
       const contact = document.getElementById('cust_contact').value.trim();
       const phone = document.getElementById('cust_phone').value.trim();
@@ -845,7 +862,6 @@
         return;
       }
       
-      const customers = read(LS.customers);
       const newCustomer = {
         id: uid('CUST'),
         company,
@@ -856,20 +872,20 @@
         status: 'active'
       };
       
-      customers.push(newCustomer);
-      write(LS.customers, customers);
+      const success = await write("customers", newCustomer);
+      if (!success) return;
       
       // Clear form
       ['cust_company', 'cust_contact', 'cust_phone', 'cust_address'].forEach(id => {
         document.getElementById(id).value = '';
       });
       
-      renderMasterData();
+      await renderMasterData();
       showToast('Customer added successfully');
     });
 
     // Product Management - Simplified
-    document.getElementById('addProduct').addEventListener('click', () => {
+    document.getElementById('addProduct').addEventListener('click', async () => {
       const partyId = document.getElementById('prod_party').value;
       const name = document.getElementById('prod_name').value.trim();
       
@@ -878,7 +894,6 @@
         return;
       }
       
-      const products = read(LS.products);
       const newProduct = {
         id: uid('PROD'),
         party_id: partyId,
@@ -888,8 +903,8 @@
         status: 'active'
       };
       
-      products.push(newProduct);
-      write(LS.products, products);
+      const success = await write("products", newProduct);
+      if (!success) return;
       
       // Clear form
       ['prod_name', 'prod_desc'].forEach(id => {
@@ -897,7 +912,7 @@
       });
       document.getElementById('prod_party').value = '';
       
-      renderMasterData();
+      await renderMasterData();
       showToast('Product added successfully');
     });
 
@@ -917,10 +932,10 @@
       document.getElementById('totalBoxes').textContent = totalBoxes;
     }
     
-    function renderWorkingLines() {
+    async function renderWorkingLines() {
       const tbody = document.querySelector('#orderLinesTable tbody');
-      const products = read(LS.products);
-      const customers = read(LS.customers);
+      const products = await read("products");
+      const customers = await read("customers");
       
       tbody.innerHTML = '';
       
@@ -954,7 +969,7 @@
     }
     
     // Filter products by customer (party)
-    document.getElementById('order_customer').addEventListener('change', function() {
+    document.getElementById('order_customer').addEventListener('change', async function() {
       const customerId = this.value;
       const productSelect = document.getElementById('line_product');
       
@@ -963,7 +978,7 @@
         return;
       }
       
-      const products = read(LS.products);
+      const products = await read("products");
       const customerProducts = products.filter(p => p.party_id === customerId);
       
       productSelect.innerHTML = '<option value="">Select Product</option>' +
@@ -1009,7 +1024,7 @@
       showToast('Order draft cleared');
     });
     
-    document.getElementById('saveOrder').addEventListener('click', () => {
+    document.getElementById('saveOrder').addEventListener('click', async () => {
       const orderNumber = document.getElementById('order_number').value.trim();
       const orderDate = document.getElementById('order_date').value;
       const customerId = document.getElementById('order_customer').value;
@@ -1024,7 +1039,7 @@
         return;
       }
       
-      const orders = read(LS.orders);
+      const orders = await read("orders");
       if (orders.find(o => o.order_number === orderNumber)) {
         showToast('Order number must be unique', 'error');
         return;
@@ -1044,8 +1059,8 @@
         completed_at: null
       };
       
-      orders.push(newOrder);
-      write(LS.orders, orders);
+      const success = await write("orders", newOrder);
+      if (!success) return;
       
       // Clear form
       workingLines = [];
@@ -1056,21 +1071,24 @@
       document.getElementById('order_customer').value = '';
       document.getElementById('line_product').innerHTML = '<option value="">Select Customer First</option>';
       
-      renderOrders();
+      await renderOrders();
       showToast('Order saved successfully');
     });
 
     // Orders Management
     function computeRemainingForLine(order, line) {
-      const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+      if (!window.dispatchesData) return line.qty;
+      const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
       const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
       return Math.max(0, Number(line.qty) - dispatched);
     }
     
     function getOrderStatus(order) {
       const lines = order.lines;
+      if (!window.dispatchesData) return 'pending';
+      
       const totalDispatched = lines.reduce((sum, line) => {
-        const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+        const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
         return sum + dispatches.reduce((s, d) => s + Number(d.dispatched_boxes), 0);
       }, 0);
       
@@ -1081,10 +1099,12 @@
       return 'partial';
     }
     
-    function renderOrders() {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function renderOrders() {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      window.dispatchesData = await read("dispatches");
+      
       const filter = document.getElementById('filter_status').value;
       const search = document.getElementById('filter_text').value.trim().toLowerCase();
       
@@ -1137,7 +1157,7 @@
         
         order.lines.forEach(line => {
           const product = products.find(p => p.id === line.product_id) || {};
-          const dispatches = read(LS.dispatches).filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
           const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
           const remaining = Math.max(0, line.qty - dispatched);
           
@@ -1187,7 +1207,7 @@
       document.querySelectorAll('.completeOrder').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const orderId = e.target.dataset.orderid;
-          const order = read(LS.orders).find(o => o.id === orderId);
+          const order = orders.find(o => o.id === orderId);
           const status = getOrderStatus(order);
           
           if (status === 'pending' || status === 'partial') {
@@ -1212,7 +1232,7 @@
         });
       });
       
-      updateSummary();
+      await updateSummary();
     }
     
     function showForceCompleteModal(order) {
@@ -1226,28 +1246,30 @@
       window.currentOrderId = order.id;
     }
     
-    function markOrderComplete(orderId, force = false, reason = '', notes = '') {
-      const orders = read(LS.orders);
+    async function markOrderComplete(orderId, force = false, reason = '', notes = '') {
+      const orders = await read("orders");
       const orderIndex = orders.findIndex(o => o.id === orderId);
       
       if (orderIndex === -1) return;
       
-      orders[orderIndex].status = 'completed';
-      orders[orderIndex].completed_at = new Date().toISOString();
+      const updatedOrder = {
+        ...orders[orderIndex],
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      };
       
       if (force) {
-        orders[orderIndex].force_completed = true;
-        orders[orderIndex].completion_reason = reason;
-        orders[orderIndex].completion_notes = notes;
+        updatedOrder.force_completed = true;
+        updatedOrder.completion_reason = reason;
+        updatedOrder.completion_notes = notes;
         
         // Add remaining boxes to dispatches as force-completed
         const order = orders[orderIndex];
-        const dispatches = read(LS.dispatches);
         
         order.lines.forEach(line => {
           const remaining = computeRemainingForLine(order, line);
           if (remaining > 0) {
-            dispatches.push({
+            const dispatch = {
               id: uid('D'),
               order_id: orderId,
               order_line_id: line.id,
@@ -1256,16 +1278,17 @@
               type: 'force_completed',
               notes: `Force completed: ${reason}`,
               created_at: new Date().toISOString()
-            });
+            };
+            write("dispatches", dispatch);
           }
         });
-        
-        write(LS.dispatches, dispatches);
       }
       
-      write(LS.orders, orders);
-      renderOrders();
-      renderDailyReport();
+      const success = await write("orders", updatedOrder);
+      if (!success) return;
+      
+      await renderOrders();
+      await renderDailyReport();
       
       if (force) {
         showToast('Order force completed');
@@ -1283,22 +1306,24 @@
       document.getElementById('forceCompleteModal').classList.remove('active');
     });
     
-    document.getElementById('confirmForceComplete').addEventListener('click', () => {
+    document.getElementById('confirmForceComplete').addEventListener('click', async () => {
       const reason = document.getElementById('completeReason').value;
       const notes = document.getElementById('completeNotes').value.trim();
       
-      markOrderComplete(window.currentOrderId, true, reason, notes);
+      await markOrderComplete(window.currentOrderId, true, reason, notes);
       document.getElementById('forceCompleteModal').classList.remove('active');
       
       // Clear modal fields
       document.getElementById('completeNotes').value = '';
     });
     
-    function showDispatchModal(orderId) {
-      const order = read(LS.orders).find(o => o.id === orderId);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function showDispatchModal(orderId) {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      window.dispatchesData = await read("dispatches");
       
+      const order = orders.find(o => o.id === orderId);
       if (!order) return;
       
       const customer = customers.find(c => c.id === order.customer_id) || {};
@@ -1392,7 +1417,7 @@
         });
       });
       
-      modalDiv.querySelector('#saveDispatch').addEventListener('click', () => {
+      modalDiv.querySelector('#saveDispatch').addEventListener('click', async () => {
         const dispatchDate = modalDiv.querySelector('#dispatchDate').value;
         const lrNumber = modalDiv.querySelector('#lrNumber').value.trim();
         const notes = modalDiv.querySelector('#dispatchNotes').value.trim();
@@ -1400,11 +1425,10 @@
         const inputs = modalDiv.querySelectorAll('input[data-lineid]');
         let hasDispatch = false;
         
-        inputs.forEach(input => {
+        for (const input of inputs) {
           const qty = parseInt(input.value);
           if (qty > 0) {
-            const dispatches = read(LS.dispatches);
-            dispatches.push({
+            const dispatch = {
               id: uid('DISP'),
               order_id: orderId,
               order_line_id: input.dataset.lineid,
@@ -1414,27 +1438,27 @@
               notes: notes,
               product_name: input.dataset.product,
               created_at: new Date().toISOString()
-            });
-            write(LS.dispatches, dispatches);
-            hasDispatch = true;
+            };
+            const success = await write("dispatches", dispatch);
+            if (success) hasDispatch = true;
           }
-        });
+        }
         
         if (hasDispatch) {
           showToast('Dispatch recorded successfully');
-          renderOrders();
-          renderDailyReport();
+          await renderOrders();
+          await renderDailyReport();
         }
         
         modalDiv.remove();
       });
     }
     
-    function showOrderDetail(orderId) {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
-      const dispatches = read(LS.dispatches);
+    async function showOrderDetail(orderId) {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      const dispatches = await read("dispatches");
       
       const order = orders.find(o => o.id === orderId);
       if (!order) return;
@@ -1579,11 +1603,11 @@
     }
 
     // Professional Report Generation
-    function generateProfessionalReport() {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
-      const dispatches = read(LS.dispatches);
+    async function generateProfessionalReport() {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      const dispatches = await read("dispatches");
       
       const today = new Date().toISOString().split('T')[0];
       const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -1855,10 +1879,11 @@
     }
 
     // Reports Dashboard
-    function renderDailyReport() {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function renderDailyReport() {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      window.dispatchesData = await read("dispatches");
       
       // Update report stats
       const totalOrders = orders.length;
@@ -1918,13 +1943,14 @@
       container.innerHTML = summaryHTML;
       
       // Update top parties
-      updateTopParties();
+      await updateTopParties();
     }
     
-    function updateTopParties() {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function updateTopParties() {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      window.dispatchesData = await read("dispatches");
       
       const partyStats = {};
       orders.forEach(order => {
@@ -1980,10 +2006,11 @@
       });
     }
     
-    function updateSummary() {
-      const orders = read(LS.orders);
-      const customers = read(LS.customers);
-      const products = read(LS.products);
+    async function updateSummary() {
+      const orders = await read("orders");
+      const customers = await read("customers");
+      const products = await read("products");
+      window.dispatchesData = await read("dispatches");
       
       const pendingOrders = orders.filter(order => {
         const status = getOrderStatus(order);
@@ -2020,27 +2047,27 @@
     }
 
     // Event Listeners
-    document.getElementById('generateReport').addEventListener('click', () => {
-      generateProfessionalReport();
+    document.getElementById('generateReport').addEventListener('click', async () => {
+      await generateProfessionalReport();
       showToast('Professional report generated');
     });
     
-    document.getElementById('refreshOrders').addEventListener('click', () => {
-      renderOrders();
+    document.getElementById('refreshOrders').addEventListener('click', async () => {
+      await renderOrders();
       showToast('Orders list refreshed');
     });
 
     // Initialize
-    function initialize() {
+    async function initialize() {
       // Set default dates
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById('order_date').value = today;
       document.getElementById('order_delivery').value = today;
       
       // Load initial data
-      renderMasterData();
-      renderOrders();
-      renderDailyReport();
+      await renderMasterData();
+      await renderOrders();
+      await renderDailyReport();
       
       showToast('Tyrone Agrochemicals OMS loaded successfully');
     }
