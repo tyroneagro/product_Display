@@ -1653,37 +1653,57 @@
       
       const totalDispatchedBoxes = dispatches.reduce((sum, dispatch) => sum + dispatch.dispatched_boxes, 0);
       
-      // Get top parties
-      const partyStats = {};
-      orders.forEach(order => {
-        order.lines.forEach(line => {
-          const product = products.find(p => p.id === line.product_id);
-          if (product) {
-            const partyId = product.party_id;
-            const party = customers.find(c => c.id === partyId);
-            if (party) {
-              if (!partyStats[partyId]) {
-                partyStats[partyId] = {
-                  company: party.company,
-                  totalOrders: 0,
-                  totalBoxes: 0,
-                  pendingBoxes: 0
-                };
-              }
-              partyStats[partyId].totalOrders++;
-              partyStats[partyId].totalBoxes += line.qty;
-              
-              const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-              const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-              partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
-            }
-          }
-        });
-      });
-      
-      const topParties = Object.values(partyStats)
-        .sort((a, b) => b.totalOrders - a.totalOrders)
-        .slice(0, 5);
+      // Get top parties (ORDER-BASED, NOT PRODUCT-BASED)
+const partyStats = {};
+
+orders.forEach(order => {
+  // Track unique parties involved in this order
+  const partiesInThisOrder = new Set();
+
+  order.lines.forEach(line => {
+    const product = products.find(p => p.id === line.product_id);
+    if (!product) return;
+
+    const partyId = product.party_id;
+    const party = customers.find(c => c.id === partyId);
+    if (!party) return;
+
+    // Initialize party stats if not exists
+    if (!partyStats[partyId]) {
+      partyStats[partyId] = {
+        company: party.company,
+        totalOrders: 0,
+        totalBoxes: 0,
+        pendingBoxes: 0
+      };
+    }
+
+    // Count boxes (product-based – this is OK)
+    partyStats[partyId].totalBoxes += line.qty;
+
+    const lineDispatches = dispatches.filter(
+      d => d.order_id === order.id && d.order_line_id === line.id
+    );
+    const dispatched = lineDispatches.reduce(
+      (sum, d) => sum + Number(d.dispatched_boxes), 0
+    );
+    partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
+
+    // Track party once per order
+    partiesInThisOrder.add(partyId);
+  });
+
+  // Increase order count ONCE per party per order
+  partiesInThisOrder.forEach(partyId => {
+    partyStats[partyId].totalOrders += 1;
+  });
+});
+
+// Sort and take top 5
+const topParties = Object.values(partyStats)
+  .sort((a, b) => b.totalOrders - a.totalOrders)
+  .slice(0, 5);
+
       
       // Generate report HTML
       let reportHTML = `
