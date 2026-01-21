@@ -311,10 +311,6 @@
       background: var(--success);
     }
     
-    .status-dot.partial {
-      background: #3b82f6;
-    }
-    
     /* Utility Classes */
     .text-muted {
       color: var(--text-muted);
@@ -642,7 +638,6 @@
                 <option value="pending">Pending Orders</option>
                 <option value="all">All Orders</option>
                 <option value="completed">Completed</option>
-                <option value="partial">Partially Dispatched</option>
               </select>
               <input type="text" id="filter_text" placeholder="Search orders..." style="padding: 6px 12px;">
             </div>
@@ -800,6 +795,23 @@
     function uid(prefix = 'id') {
       return prefix + Date.now().toString(36) + Math.floor(Math.random() * 9000 + 1000).toString(36);
     }
+
+    // ===== SINGLE SOURCE OF TRUTH FUNCTIONS =====
+    function computeOrderRemaining(order, dispatches) {
+      return order.lines.reduce((sum, line) => {
+        const dispatched = dispatches
+          .filter(d => d.order_id === order.id && d.order_line_id === line.id)
+          .reduce((s, d) => s + Number(d.dispatched_boxes), 0);
+        return sum + Math.max(0, Number(line.qty) - dispatched);
+      }, 0);
+    }
+
+    function getOrderStatus(order, dispatches) {
+      return computeOrderRemaining(order, dispatches) === 0
+        ? 'completed'
+        : 'pending';
+    }
+    // ============================================
 
     // Firebase Firestore based functions
     async function read(collection) {
@@ -1064,7 +1076,7 @@
         order_date: orderDate,
         delivery_date: document.getElementById('order_delivery').value || orderDate,
         notes: document.getElementById('order_notes').value.trim(),
-        status: 'pending',
+        status: 'pending', // This is just for reference, actual status is computed
         lines: JSON.parse(JSON.stringify(workingLines)),
         created_at: new Date().toISOString(),
         total_boxes: parseInt(document.getElementById('totalBoxes').textContent),
@@ -1088,34 +1100,13 @@
     });
 
     // Orders Management
-    async function computeRemainingForLine(order, line) {
-      const dispatches = await read("dispatches");
-      const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-      const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-      return Math.max(0, Number(line.qty) - dispatched);
-    }
-    
-    async function getOrderStatus(order) {
-      const lines = order.lines;
-      const dispatches = await read("dispatches");
-      
-      const totalDispatched = lines.reduce((sum, line) => {
-        const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-        return sum + lineDispatches.reduce((s, d) => s + Number(d.dispatched_boxes), 0);
-      }, 0);
-      
-      const totalOrdered = lines.reduce((sum, line) => sum + Number(line.qty), 0);
-      
-      if (totalDispatched === 0) return 'pending';
-      if (totalDispatched === totalOrdered) return 'completed';
-      return 'partial';
-    }
-    
     async function renderOrders() {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
+      const [orders, customers, products, dispatches] = await Promise.all([
+        read("orders"),
+        read("customers"),
+        read("products"),
+        read("dispatches")
+      ]);
       
       const filter = document.getElementById('filter_status').value;
       const search = document.getElementById('filter_text').value.trim().toLowerCase();
@@ -1123,11 +1114,16 @@
       const container = document.getElementById('ordersContainer');
       container.innerHTML = '';
       
+      // Filter and process orders
       const filteredOrders = orders.filter(order => {
-        const customer = customers.find(c => c.id === order.customer_id) || {};
-        const statusPromise = getOrderStatus(order);
-        
-        // We'll handle status filtering after async calculation
+        // Apply search filter first (fast)
+        if (search) {
+          const customer = customers.find(c => c.id === order.customer_id) || {};
+          const matchesOrderNumber = order.order_number.toLowerCase().includes(search);
+          const matchesCustomer = customer.company.toLowerCase().includes(search) || 
+                                 (customer.contact && customer.contact.toLowerCase().includes(search));
+          if (!matchesOrderNumber && !matchesCustomer) return false;
+        }
         return true;
       }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       
@@ -1136,50 +1132,38 @@
         return;
       }
       
-      // Process each order asynchronously
+      // Process each order
       for (const order of filteredOrders) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = await getOrderStatus(order);
+        const remaining = computeOrderRemaining(order, dispatches);
+        const status = remaining === 0 ? 'completed' : 'pending';
         
-        // Apply filters
+        // Apply status filter
         if (filter === 'pending' && status !== 'pending') continue;
         if (filter === 'completed' && status !== 'completed') continue;
-        if (filter === 'partial' && status !== 'partial') continue;
-        
-        // Apply search filter
-        if (search) {
-          const matchesOrderNumber = order.order_number.toLowerCase().includes(search);
-          const matchesCustomer = customer.company.toLowerCase().includes(search) || 
-                                 (customer.contact && customer.contact.toLowerCase().includes(search));
-          if (!matchesOrderNumber && !matchesCustomer) continue;
-        }
-        
-        const statusColors = {
-          pending: 'badge-warning',
-          completed: 'badge-success',
-          partial: 'badge-danger'
-        };
-        
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.marginBottom = '12px';
-        card.style.borderLeft = `4px solid ${status === 'completed' ? '#059669' : status === 'partial' ? '#3b82f6' : '#d97706'}`;
         
         // Calculate dispatch summary
         let totalOrdered = 0;
         let totalDispatched = 0;
-        let totalRemaining = 0;
         
         for (const line of order.lines) {
           const product = products.find(p => p.id === line.product_id) || {};
           const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
           const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-          const remaining = Math.max(0, line.qty - dispatched);
           
           totalOrdered += line.qty;
           totalDispatched += dispatched;
-          totalRemaining += remaining;
         }
+        
+        const statusColors = {
+          pending: 'badge-warning',
+          completed: 'badge-success'
+        };
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '12px';
+        card.style.borderLeft = `4px solid ${status === 'completed' ? '#059669' : '#d97706'}`;
         
         card.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1196,7 +1180,7 @@
               <div style="display: flex; gap: 16px; font-size: 13px;">
                 <div>Ordered: <strong>${totalOrdered}</strong> boxes</div>
                 <div>Dispatched: <strong>${totalDispatched}</strong> boxes</div>
-                <div>Remaining: <strong>${totalRemaining}</strong> boxes</div>
+                <div>Remaining: <strong>${remaining}</strong> boxes</div>
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -1224,22 +1208,22 @@
         
         if (completeBtn) {
           completeBtn.addEventListener('click', (e) => {
-            const orderId = e.target.dataset.orderid;
-            showForceCompleteModal(order);
+            e.preventDefault();
+            showForceCompleteModal(order, dispatches);
           });
         }
         
         if (dispatchBtn) {
           dispatchBtn.addEventListener('click', (e) => {
-            const orderId = e.target.dataset.orderid;
-            showDispatchModal(orderId);
+            e.preventDefault();
+            showDispatchModal(order.id);
           });
         }
         
         if (detailBtn) {
           detailBtn.addEventListener('click', (e) => {
-            const orderId = e.target.dataset.orderid;
-            showOrderDetail(orderId);
+            e.preventDefault();
+            showOrderDetail(order.id);
           });
         }
       }
@@ -1248,51 +1232,56 @@
         container.innerHTML = '<div class="text-center text-muted" style="padding: 40px;">No orders match your filters</div>';
       }
       
-      await updateSummary();
+      await updateDashboard();
     }
     
-    async function showForceCompleteModal(order) {
+    async function showForceCompleteModal(order, dispatches) {
+      const remaining = computeOrderRemaining(order, dispatches);
       const modal = document.getElementById('forceCompleteModal');
-      let remainingBoxes = 0;
       
-      for (const line of order.lines) {
-        remainingBoxes += await computeRemainingForLine(order, line);
-      }
-      
-      document.getElementById('remainingBoxesCount').textContent = remainingBoxes;
+      document.getElementById('remainingBoxesCount').textContent = remaining;
       modal.classList.add('active');
       window.currentOrderId = order.id;
+      window.currentRemaining = remaining;
     }
     
     async function markOrderComplete(orderId, force = false, reason = '', notes = '') {
-      const orders = await read("orders");
-      const order = orders.find(o => o.id === orderId);
+      const [orders, dispatches] = await Promise.all([
+        read("orders"),
+        read("dispatches")
+      ]);
       
+      const order = orders.find(o => o.id === orderId);
       if (!order) return;
+      
+      // Get current remaining boxes
+      const remaining = computeOrderRemaining(order, dispatches);
       
       const updatedOrder = {
         ...order,
-        status: 'completed',
         completed_at: new Date().toISOString()
       };
       
-      if (force) {
+      if (force && remaining > 0) {
         updatedOrder.force_completed = true;
         updatedOrder.completion_reason = reason;
         updatedOrder.completion_notes = notes;
         
         // Add remaining boxes to dispatches as force-completed
         for (const line of order.lines) {
-          const remaining = await computeRemainingForLine(order, line);
-          if (remaining > 0) {
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          const lineRemaining = Math.max(0, line.qty - dispatched);
+          
+          if (lineRemaining > 0) {
             const dispatch = {
               id: uid('D'),
               order_id: orderId,
               order_line_id: line.id,
-              dispatched_boxes: remaining,
+              dispatched_boxes: lineRemaining,
               dispatch_date: new Date().toISOString().slice(0, 10),
               type: 'force_completed',
-              notes: `Force completed: ${reason}`,
+              notes: `Force completed: ${reason} - ${notes}`,
               created_at: new Date().toISOString()
             };
             await write("dispatches", dispatch);
@@ -1304,7 +1293,7 @@
       if (!success) return;
       
       await renderOrders();
-      await renderDailyReport();
+      await updateDashboard();
       
       if (force) {
         showToast('Order force completed');
@@ -1334,10 +1323,12 @@
     });
     
     async function showDispatchModal(orderId) {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
+      const [orders, customers, products, dispatches] = await Promise.all([
+        read("orders"),
+        read("customers"),
+        read("products"),
+        read("dispatches")
+      ]);
       
       const order = orders.find(o => o.id === orderId);
       if (!order) return;
@@ -1425,15 +1416,9 @@
       document.body.appendChild(modalDiv);
       
       // Bind event listeners
-      modalDiv.querySelector('.closeDispatchModal').addEventListener('click', () => {
-        modalDiv.remove();
-      });
+      const closeModal = () => modalDiv.remove();
       
-      modalDiv.querySelectorAll('.closeDispatchModal').forEach(btn => {
-        btn.addEventListener('click', () => {
-          modalDiv.remove();
-        });
-      });
+      modalDiv.querySelector('.closeDispatchModal').addEventListener('click', closeModal);
       
       modalDiv.querySelector('#saveDispatch').addEventListener('click', async () => {
         const dispatchDate = modalDiv.querySelector('#dispatchDate').value;
@@ -1465,24 +1450,27 @@
         if (hasDispatch) {
           showToast('Dispatch recorded successfully');
           await renderOrders();
-          await renderDailyReport();
+          await updateDashboard();
         }
         
-        modalDiv.remove();
+        closeModal();
       });
     }
     
     async function showOrderDetail(orderId) {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
+      const [orders, customers, products, dispatches] = await Promise.all([
+        read("orders"),
+        read("customers"),
+        read("products"),
+        read("dispatches")
+      ]);
       
       const order = orders.find(o => o.id === orderId);
       if (!order) return;
       
       const customer = customers.find(c => c.id === order.customer_id) || {};
-      const status = await getOrderStatus(order);
+      const remaining = computeOrderRemaining(order, dispatches);
+      const status = remaining === 0 ? 'completed' : 'pending';
       
       let html = `
         <!DOCTYPE html>
@@ -1501,7 +1489,6 @@
             .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
             .pending { background: #fff3cd; color: #856404; }
             .completed { background: #d4edda; color: #155724; }
-            .partial { background: #cce5ff; color: #004085; }
           </style>
         </head>
         <body>
@@ -1595,11 +1582,10 @@
         html += `<tr><td colspan="5" style="text-align: center;">No dispatches recorded</td></tr>`;
       } else {
         orderDispatches.forEach(dispatch => {
-          const product = products.find(p => p.id === dispatch.product_id) || {};
           html += `
             <tr>
               <td>${dispatch.dispatch_date}</td>
-              <td>${dispatch.product_name || product.name || 'N/A'}</td>
+              <td>${dispatch.product_name || 'N/A'}</td>
               <td>${dispatch.dispatched_boxes}</td>
               <td>${dispatch.lr_number || 'N/A'}</td>
               <td>${dispatch.notes || 'N/A'}</td>
@@ -1622,68 +1608,77 @@
 
     // Professional Report Generation
     async function generateProfessionalReport() {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
+      const [orders, customers, products, dispatches] = await Promise.all([
+        read("orders"),
+        read("customers"),
+        read("products"),
+        read("dispatches")
+      ]);
       
       const today = new Date().toISOString().split('T')[0];
       const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
       
-      // Calculate statistics
-      const totalOrders = orders.length;
-      const completedOrders = orders.filter(order => {
-        const status = getOrderStatus(order);
-        return status === 'completed';
-      }).length;
-      
-      const pendingOrders = orders.filter(order => {
-        const status = getOrderStatus(order);
-        return status === 'pending' || status === 'partial';
-      }).length;
-      
+      // Calculate statistics using single source of truth
+      let pendingOrders = 0;
+      let completedOrders = 0;
       let totalRemainingBoxes = 0;
-      for (const order of orders) {
-        for (const line of order.lines) {
-          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-          totalRemainingBoxes += Math.max(0, line.qty - dispatched);
-        }
-      }
+      let totalDispatchedBoxes = 0;
       
-      const totalDispatchedBoxes = dispatches.reduce((sum, dispatch) => sum + dispatch.dispatched_boxes, 0);
-      // Get top parties
-const partyStats = {};
-orders.forEach(order => {
-  order.lines.forEach(line => {
-    const product = products.find(p => p.id === line.product_id);
-    if (product) {
-      const partyId = product.party_id;
-      const party = customers.find(c => c.id === partyId);
-      if (party) {
-        if (!partyStats[partyId]) {
-          partyStats[partyId] = {
-            company: party.company,
-            totalOrders: 0,
-            totalBoxes: 0,
-            pendingBoxes: 0
-          };
+      orders.forEach(order => {
+        const remaining = computeOrderRemaining(order, dispatches);
+        if (remaining === 0) {
+          completedOrders++;
+        } else {
+          pendingOrders++;
+          totalRemainingBoxes += remaining;
         }
-        partyStats[partyId].totalOrders++;
-        partyStats[partyId].totalBoxes += line.qty;
-
-        const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-        const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-        partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
-      }
-    }
-  });
-});
-
-const topParties = Object.values(partyStats)
-  .sort((a, b) => b.totalOrders - a.totalOrders)
-  .slice(0, 5);
-
+      });
+      
+      totalDispatchedBoxes = dispatches.reduce((sum, dispatch) => sum + dispatch.dispatched_boxes, 0);
+      
+      // Get top parties with correct logic (one order = one count)
+      const partyStats = {};
+      orders.forEach(order => {
+        const partiesInOrder = new Set();
+        
+        order.lines.forEach(line => {
+          const product = products.find(p => p.id === line.product_id);
+          if (!product) return;
+          
+          const partyId = product.party_id;
+          const party = customers.find(c => c.id === partyId);
+          if (!party) return;
+          
+          if (!partyStats[partyId]) {
+            partyStats[partyId] = {
+              company: party.company,
+              totalOrders: 0,
+              totalBoxes: 0,
+              pendingBoxes: 0
+            };
+          }
+          
+          partyStats[partyId].totalBoxes += line.qty;
+          
+          const dispatched = dispatches
+            .filter(d => d.order_id === order.id && d.order_line_id === line.id)
+            .reduce((s, d) => s + Number(d.dispatched_boxes), 0);
+          
+          partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
+          
+          partiesInOrder.add(partyId);
+        });
+        
+        // Count order only once per party
+        partiesInOrder.forEach(partyId => {
+          partyStats[partyId].totalOrders += 1;
+        });
+      });
+      
+      const topParties = Object.values(partyStats)
+        .sort((a, b) => b.totalOrders - a.totalOrders)
+        .slice(0, 5);
+      
       // Generate report HTML
       let reportHTML = `
         <div id="printReport">
@@ -1704,7 +1699,7 @@ const topParties = Object.values(partyStats)
           
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
             <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 32px; font-weight: bold; color: #2563eb;">${totalOrders}</div>
+              <div style="font-size: 32px; font-weight: bold; color: #2563eb;">${orders.length}</div>
               <div style="color: #64748b; font-size: 14px;">Total Orders</div>
             </div>
             <div style="background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center;">
@@ -1739,33 +1734,26 @@ const topParties = Object.values(partyStats)
       // Add pending orders to report
       const pendingOrdersList = [];
       for (const order of orders) {
-        const status = await getOrderStatus(order);
-        if (status === 'pending' || status === 'partial') {
-          pendingOrdersList.push({ order, status });
+        const remaining = computeOrderRemaining(order, dispatches);
+        if (remaining > 0) {
+          pendingOrdersList.push({ order, remaining });
           if (pendingOrdersList.length >= 10) break;
         }
       }
       
-      for (const { order, status } of pendingOrdersList) {
+      for (const { order, remaining } of pendingOrdersList) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        let remainingBoxes = 0;
-        
-        for (const line of order.lines) {
-          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-          remainingBoxes += Math.max(0, line.qty - dispatched);
-        }
         
         reportHTML += `
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${order.order_number}</td>
             <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${customer.company || 'N/A'}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${remainingBoxes} boxes</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${remaining} boxes</td>
             <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
               <span style="padding: 4px 8px; border-radius: 12px; font-size: 12px; 
-                background: ${status === 'pending' ? '#fef3c7' : '#cce5ff'}; 
-                color: ${status === 'pending' ? '#92400e' : '#1e40af'}">
-                ${status.toUpperCase()}
+                background: #fef3c7; 
+                color: #92400e">
+                PENDING
               </span>
             </td>
           </tr>
@@ -1911,42 +1899,46 @@ const topParties = Object.values(partyStats)
       });
     }
 
-    // Reports Dashboard
-    async function renderDailyReport() {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
+    // Dashboard Updates
+    async function updateDashboard() {
+      const [orders, customers, products, dispatches] = await Promise.all([
+        read("orders"),
+        read("customers"),
+        read("products"),
+        read("dispatches")
+      ]);
       
-      // Update report stats
-      const totalOrders = orders.length;
-      let completedOrders = 0;
+      // Update report stats using single source of truth
       let pendingOrders = 0;
+      let completedOrders = 0;
+      let totalRemainingBoxes = 0;
       
-      for (const order of orders) {
-        const status = await getOrderStatus(order);
-        if (status === 'completed') {
+      orders.forEach(order => {
+        const remaining = computeOrderRemaining(order, dispatches);
+        if (remaining === 0) {
           completedOrders++;
         } else {
           pendingOrders++;
+          totalRemainingBoxes += remaining;
         }
-      }
-      
-      let totalRemainingBoxes = 0;
-      for (const order of orders) {
-        for (const line of order.lines) {
-          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-          totalRemainingBoxes += Math.max(0, line.qty - dispatched);
-        }
-      }
+      });
       
       document.getElementById('reportPendingOrders').textContent = pendingOrders;
       document.getElementById('reportCompletedOrders').textContent = completedOrders;
       document.getElementById('reportRemainingBoxes').textContent = totalRemainingBoxes;
-      document.getElementById('reportTotalOrders').textContent = totalOrders;
+      document.getElementById('reportTotalOrders').textContent = orders.length;
       
-      // Render today's summary
+      // Update today's summary
+      await updateDailyReport(orders, customers, products, dispatches);
+      
+      // Update top parties
+      await updateTopParties(orders, customers, products, dispatches);
+      
+      // Update summary box
+      await updateSummaryBox(orders, products, dispatches);
+    }
+    
+    async function updateDailyReport(orders, customers, products, dispatches) {
       const container = document.getElementById('dailyReport');
       const today = new Date().toISOString().split('T')[0];
       
@@ -1961,17 +1953,10 @@ const topParties = Object.values(partyStats)
       let summaryHTML = '';
       for (const order of todaysOrders) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = await getOrderStatus(order);
-        
-        let remainingBoxes = 0;
-        for (const line of order.lines) {
-          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-          remainingBoxes += Math.max(0, line.qty - dispatched);
-        }
+        const remaining = computeOrderRemaining(order, dispatches);
         
         summaryHTML += `
-          <div class="card" style="padding: 12px; margin-bottom: 8px; border-left: 3px solid ${status === 'completed' ? '#059669' : '#d97706'}">
+          <div class="card" style="padding: 12px; margin-bottom: 8px; border-left: 3px solid ${remaining === 0 ? '#059669' : '#d97706'}">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <strong>${order.order_number}</strong>
@@ -1979,7 +1964,7 @@ const topParties = Object.values(partyStats)
               </div>
               <div style="text-align: right;">
                 <div style="font-size: 14px; font-weight: 500;">${order.total_boxes || 0} boxes</div>
-                <div class="text-muted" style="font-size: 11px;">${remainingBoxes} remaining</div>
+                <div class="text-muted" style="font-size: 11px;">${remaining} remaining</div>
               </div>
             </div>
           </div>
@@ -1987,38 +1972,50 @@ const topParties = Object.values(partyStats)
       }
       
       container.innerHTML = summaryHTML;
-      
-      // Update top parties
-      await updateTopParties();
     }
     
-    async function updateTopParties() {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      
+    async function updateTopParties(orders, customers, products, dispatches) {
       const partyStats = {};
+      
       orders.forEach(order => {
+        const partiesInOrder = new Set();
+        
         order.lines.forEach(line => {
           const product = products.find(p => p.id === line.product_id);
-          if (product) {
-            const partyId = product.party_id;
-            const party = customers.find(c => c.id === partyId);
-            if (party) {
-              if (!partyStats[partyId]) {
-                partyStats[partyId] = {
-                  company: party.company,
-                  orderCount: 0
-                };
-              }
-              partyStats[partyId].orderCount++;
-            }
+          if (!product) return;
+          
+          const partyId = product.party_id;
+          const party = customers.find(c => c.id === partyId);
+          if (!party) return;
+          
+          if (!partyStats[partyId]) {
+            partyStats[partyId] = {
+              company: party.company,
+              totalOrders: 0,
+              totalBoxes: 0,
+              pendingBoxes: 0
+            };
           }
+          
+          partyStats[partyId].totalBoxes += line.qty;
+          
+          const dispatched = dispatches
+            .filter(d => d.order_id === order.id && d.order_line_id === line.id)
+            .reduce((s, d) => s + Number(d.dispatched_boxes), 0);
+          
+          partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
+          
+          partiesInOrder.add(partyId);
+        });
+        
+        // Count order only once per party
+        partiesInOrder.forEach(partyId => {
+          partyStats[partyId].totalOrders += 1;
         });
       });
       
       const topParties = Object.values(partyStats)
-        .sort((a, b) => b.orderCount - a.orderCount)
+        .sort((a, b) => b.totalOrders - a.totalOrders)
         .slice(0, 5);
       
       const container = document.getElementById('topParties');
@@ -2041,37 +2038,29 @@ const topParties = Object.values(partyStats)
         div.innerHTML = `
           <div>
             <strong style="font-size: 14px;">${party.company}</strong>
+            <div class="text-muted" style="font-size: 12px;">${party.totalOrders} orders</div>
           </div>
-          <span class="badge badge-primary" style="font-size: 12px;">
-            ${party.orderCount} orders
-          </span>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: 500;">${party.totalBoxes} boxes</div>
+            <div class="text-muted" style="font-size: 11px;">${party.pendingBoxes} pending</div>
+          </div>
         `;
         
         container.appendChild(div);
       });
     }
     
-    async function updateSummary() {
-      const orders = await read("orders");
-      const customers = await read("customers");
-      const products = await read("products");
-      const dispatches = await read("dispatches");
-      
+    async function updateSummaryBox(orders, products, dispatches) {
       let pendingOrders = 0;
       let totalRemaining = 0;
       
-      for (const order of orders) {
-        const status = await getOrderStatus(order);
-        if (status === 'pending' || status === 'partial') {
+      orders.forEach(order => {
+        const remaining = computeOrderRemaining(order, dispatches);
+        if (remaining > 0) {
           pendingOrders++;
-          
-          for (const line of order.lines) {
-            const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-            const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
-            totalRemaining += Math.max(0, line.qty - dispatched);
-          }
+          totalRemaining += remaining;
         }
-      }
+      });
       
       const summaryBox = document.getElementById('summaryBox');
       summaryBox.innerHTML = `
@@ -2107,6 +2096,15 @@ const topParties = Object.values(partyStats)
       showToast('Orders list refreshed');
     });
 
+    // Filter event listeners
+    document.getElementById('filter_status').addEventListener('change', async () => {
+      await renderOrders();
+    });
+    
+    document.getElementById('filter_text').addEventListener('input', async () => {
+      await renderOrders();
+    });
+
     // Initialize
     async function initialize() {
       // Set default dates
@@ -2117,7 +2115,7 @@ const topParties = Object.values(partyStats)
       // Load initial data
       await renderMasterData();
       await renderOrders();
-      await renderDailyReport();
+      await updateDashboard();
       
       showToast('Tyrone Agrochemicals OMS loaded successfully');
     }
