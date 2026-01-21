@@ -768,58 +768,61 @@
       </div>
     </div>
   </div>
-<iframe name="hiddenFrame" style="display:none;"></iframe>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <script>
+    // ===== FIREBASE INITIALIZATION =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyBowsklKCH-C5uVv1laoqE9joupuGeqVdk",
+      authDomain: "tyrone-oms.firebaseapp.com",
+      projectId: "tyrone-oms",
+      storageBucket: "tyrone-oms.firebasestorage.app",
+      messagingSenderId: "494239566320",
+      appId: "1:494239566320:web:9f44f2da4c8f00f7e9b535"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    // ==================================
+
     // Enhanced OMS System for Tyrone Agrochemicals
-    const API_URL = "https://script.google.com/macros/s/AKfycbw_m1OJWig1rEpRbKzRvgmoE1K6hzfWtBzgdEsPdyszgzNuaEXkpHuSCoZ3zvxgeduUNg/exec";
+    const LS = {
+      customers: 'tyrone_customers',
+      products: 'tyrone_products',
+      orders: 'tyrone_orders',
+      dispatches: 'tyrone_dispatches'
+    };
 
     // Utility Functions
     function uid(prefix = 'id') {
       return prefix + Date.now().toString(36) + Math.floor(Math.random() * 9000 + 1000).toString(36);
     }
 
-    // Google Sheet based functions
-    async function read(sheet) {
+    // Firebase Firestore based functions
+    async function read(collection) {
       try {
-        const res = await fetch(API_URL + "?sheet=" + sheet);
-        if (!res.ok) throw new Error(`Failed to fetch ${sheet}`);
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) return [];
-        data.shift(); // remove header row
-        return data.map(row => JSON.parse(row[0]));
+        const snapshot = await db.collection(collection).get();
+        return snapshot.docs.map(doc => doc.data());
       } catch (e) {
-        console.error(`Error reading ${sheet}:`, e);
-        showToast(`Error loading ${sheet}`, 'error');
+        console.error(`Error reading ${collection}:`, e);
+        showToast(`Error loading ${collection}`, 'error');
         return [];
       }
     }
 
-  function write(sheet, obj) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = API_URL;
-  form.target = "hiddenFrame"; // 👈 THIS IS THE KEY
-  form.style.display = "none";
-
-  const inputSheet = document.createElement("input");
-  inputSheet.name = "sheet";
-  inputSheet.value = sheet;
-
-  const inputData = document.createElement("input");
-  inputData.name = "data";
-  inputData.value = JSON.stringify(obj);
-
-  form.appendChild(inputSheet);
-  form.appendChild(inputData);
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-
-  return true;
-}
-
-
+    async function write(collection, obj) {
+      try {
+        await db.collection(collection).doc(obj.id).set(obj);
+        return true;
+      } catch (e) {
+        console.error(`Error writing to ${collection}:`, e);
+        showToast(`Error saving to ${collection}`, 'error');
+        return false;
+      }
+    }
 
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -1085,20 +1088,20 @@
     });
 
     // Orders Management
-    function computeRemainingForLine(order, line) {
-      if (!window.dispatchesData) return line.qty;
-      const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-      const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+    async function computeRemainingForLine(order, line) {
+      const dispatches = await read("dispatches");
+      const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+      const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
       return Math.max(0, Number(line.qty) - dispatched);
     }
     
-    function getOrderStatus(order) {
+    async function getOrderStatus(order) {
       const lines = order.lines;
-      if (!window.dispatchesData) return 'pending';
+      const dispatches = await read("dispatches");
       
       const totalDispatched = lines.reduce((sum, line) => {
-        const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-        return sum + dispatches.reduce((s, d) => s + Number(d.dispatched_boxes), 0);
+        const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+        return sum + lineDispatches.reduce((s, d) => s + Number(d.dispatched_boxes), 0);
       }, 0);
       
       const totalOrdered = lines.reduce((sum, line) => sum + Number(line.qty), 0);
@@ -1112,7 +1115,7 @@
       const orders = await read("orders");
       const customers = await read("customers");
       const products = await read("products");
-      window.dispatchesData = await read("dispatches");
+      const dispatches = await read("dispatches");
       
       const filter = document.getElementById('filter_status').value;
       const search = document.getElementById('filter_text').value.trim().toLowerCase();
@@ -1122,21 +1125,9 @@
       
       const filteredOrders = orders.filter(order => {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = getOrderStatus(order);
+        const statusPromise = getOrderStatus(order);
         
-        // Apply status filter
-        if (filter === 'pending' && status !== 'pending') return false;
-        if (filter === 'completed' && status !== 'completed') return false;
-        if (filter === 'partial' && status !== 'partial') return false;
-        
-        // Apply search filter
-        if (search) {
-          const matchesOrderNumber = order.order_number.toLowerCase().includes(search);
-          const matchesCustomer = customer.company.toLowerCase().includes(search) || 
-                                 (customer.contact && customer.contact.toLowerCase().includes(search));
-          return matchesOrderNumber || matchesCustomer;
-        }
-        
+        // We'll handle status filtering after async calculation
         return true;
       }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       
@@ -1145,9 +1136,24 @@
         return;
       }
       
-      filteredOrders.forEach(order => {
+      // Process each order asynchronously
+      for (const order of filteredOrders) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = getOrderStatus(order);
+        const status = await getOrderStatus(order);
+        
+        // Apply filters
+        if (filter === 'pending' && status !== 'pending') continue;
+        if (filter === 'completed' && status !== 'completed') continue;
+        if (filter === 'partial' && status !== 'partial') continue;
+        
+        // Apply search filter
+        if (search) {
+          const matchesOrderNumber = order.order_number.toLowerCase().includes(search);
+          const matchesCustomer = customer.company.toLowerCase().includes(search) || 
+                                 (customer.contact && customer.contact.toLowerCase().includes(search));
+          if (!matchesOrderNumber && !matchesCustomer) continue;
+        }
+        
         const statusColors = {
           pending: 'badge-warning',
           completed: 'badge-success',
@@ -1164,16 +1170,16 @@
         let totalDispatched = 0;
         let totalRemaining = 0;
         
-        order.lines.forEach(line => {
+        for (const line of order.lines) {
           const product = products.find(p => p.id === line.product_id) || {};
-          const dispatches = window.dispatchesData.filter(d => d.order_id === order.id && d.order_line_id === line.id);
-          const dispatched = dispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
           const remaining = Math.max(0, line.qty - dispatched);
           
           totalOrdered += line.qty;
           totalDispatched += dispatched;
           totalRemaining += remaining;
-        });
+        }
         
         card.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1210,45 +1216,48 @@
         `;
         
         container.appendChild(card);
-      });
-      
-      // Bind event listeners
-      document.querySelectorAll('.completeOrder').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const orderId = e.target.dataset.orderid;
-          const order = orders.find(o => o.id === orderId);
-          const status = getOrderStatus(order);
-          
-          if (status === 'pending' || status === 'partial') {
+        
+        // Bind event listeners for this card
+        const completeBtn = card.querySelector('.completeOrder');
+        const dispatchBtn = card.querySelector('.showDispatch');
+        const detailBtn = card.querySelector('.showDetail');
+        
+        if (completeBtn) {
+          completeBtn.addEventListener('click', (e) => {
+            const orderId = e.target.dataset.orderid;
             showForceCompleteModal(order);
-          } else {
-            markOrderComplete(orderId);
-          }
-        });
-      });
+          });
+        }
+        
+        if (dispatchBtn) {
+          dispatchBtn.addEventListener('click', (e) => {
+            const orderId = e.target.dataset.orderid;
+            showDispatchModal(orderId);
+          });
+        }
+        
+        if (detailBtn) {
+          detailBtn.addEventListener('click', (e) => {
+            const orderId = e.target.dataset.orderid;
+            showOrderDetail(orderId);
+          });
+        }
+      }
       
-      document.querySelectorAll('.showDispatch').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const orderId = e.target.dataset.orderid;
-          showDispatchModal(orderId);
-        });
-      });
-      
-      document.querySelectorAll('.showDetail').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const orderId = e.target.dataset.orderid;
-          showOrderDetail(orderId);
-        });
-      });
+      if (container.innerHTML === '') {
+        container.innerHTML = '<div class="text-center text-muted" style="padding: 40px;">No orders match your filters</div>';
+      }
       
       await updateSummary();
     }
     
-    function showForceCompleteModal(order) {
+    async function showForceCompleteModal(order) {
       const modal = document.getElementById('forceCompleteModal');
-      const remainingBoxes = order.lines.reduce((sum, line) => {
-        return sum + computeRemainingForLine(order, line);
-      }, 0);
+      let remainingBoxes = 0;
+      
+      for (const line of order.lines) {
+        remainingBoxes += await computeRemainingForLine(order, line);
+      }
       
       document.getElementById('remainingBoxesCount').textContent = remainingBoxes;
       modal.classList.add('active');
@@ -1257,12 +1266,12 @@
     
     async function markOrderComplete(orderId, force = false, reason = '', notes = '') {
       const orders = await read("orders");
-      const orderIndex = orders.findIndex(o => o.id === orderId);
+      const order = orders.find(o => o.id === orderId);
       
-      if (orderIndex === -1) return;
+      if (!order) return;
       
       const updatedOrder = {
-        ...orders[orderIndex],
+        ...order,
         status: 'completed',
         completed_at: new Date().toISOString()
       };
@@ -1273,10 +1282,8 @@
         updatedOrder.completion_notes = notes;
         
         // Add remaining boxes to dispatches as force-completed
-        const order = orders[orderIndex];
-        
-        order.lines.forEach(line => {
-          const remaining = computeRemainingForLine(order, line);
+        for (const line of order.lines) {
+          const remaining = await computeRemainingForLine(order, line);
           if (remaining > 0) {
             const dispatch = {
               id: uid('D'),
@@ -1288,9 +1295,9 @@
               notes: `Force completed: ${reason}`,
               created_at: new Date().toISOString()
             };
-            write("dispatches", dispatch);
+            await write("dispatches", dispatch);
           }
-        });
+        }
       }
       
       const success = await write("orders", updatedOrder);
@@ -1330,7 +1337,7 @@
       const orders = await read("orders");
       const customers = await read("customers");
       const products = await read("products");
-      window.dispatchesData = await read("dispatches");
+      const dispatches = await read("dispatches");
       
       const order = orders.find(o => o.id === orderId);
       if (!order) return;
@@ -1361,16 +1368,18 @@
                 <tbody>
       `;
       
-      order.lines.forEach(line => {
+      for (const line of order.lines) {
         const product = products.find(p => p.id === line.product_id) || {};
-        const remaining = computeRemainingForLine(order, line);
+        const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+        const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+        const remaining = Math.max(0, line.qty - dispatched);
         
         if (remaining > 0) {
           modalHTML += `
             <tr>
               <td>${product.name}</td>
               <td>${line.qty}</td>
-              <td>${line.qty - remaining}</td>
+              <td>${dispatched}</td>
               <td>${remaining}</td>
               <td>
                 <input type="number" 
@@ -1384,7 +1393,7 @@
             </tr>
           `;
         }
-      });
+      }
       
       modalHTML += `
                 </tbody>
@@ -1473,7 +1482,7 @@
       if (!order) return;
       
       const customer = customers.find(c => c.id === order.customer_id) || {};
-      const status = getOrderStatus(order);
+      const status = await getOrderStatus(order);
       
       let html = `
         <!DOCTYPE html>
@@ -1542,7 +1551,7 @@
             <tbody>
       `;
       
-      order.lines.forEach(line => {
+      for (const line of order.lines) {
         const product = products.find(p => p.id === line.product_id) || {};
         const party = customers.find(c => c.id === product.party_id) || {};
         const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
@@ -1558,7 +1567,7 @@
             <td>${remaining}</td>
           </tr>
         `;
-      });
+      }
       
       html += `
             </tbody>
@@ -1623,17 +1632,24 @@
       
       // Calculate statistics
       const totalOrders = orders.length;
-      const completedOrders = orders.filter(order => getOrderStatus(order) === 'completed').length;
+      const completedOrders = orders.filter(order => {
+        const status = getOrderStatus(order);
+        return status === 'completed';
+      }).length;
+      
       const pendingOrders = orders.filter(order => {
         const status = getOrderStatus(order);
         return status === 'pending' || status === 'partial';
       }).length;
       
-      const totalRemainingBoxes = orders.reduce((sum, order) => {
-        return sum + order.lines.reduce((lineSum, line) => {
-          return lineSum + computeRemainingForLine(order, line);
-        }, 0);
-      }, 0);
+      let totalRemainingBoxes = 0;
+      for (const order of orders) {
+        for (const line of order.lines) {
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          totalRemainingBoxes += Math.max(0, line.qty - dispatched);
+        }
+      }
       
       const totalDispatchedBoxes = dispatches.reduce((sum, dispatch) => sum + dispatch.dispatched_boxes, 0);
       
@@ -1656,7 +1672,10 @@
               }
               partyStats[partyId].totalOrders++;
               partyStats[partyId].totalBoxes += line.qty;
-              partyStats[partyId].pendingBoxes += computeRemainingForLine(order, line);
+              
+              const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+              const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+              partyStats[partyId].pendingBoxes += Math.max(0, line.qty - dispatched);
             }
           }
         });
@@ -1719,17 +1738,24 @@
       `;
       
       // Add pending orders to report
-      const pendingOrdersList = orders.filter(order => {
-        const status = getOrderStatus(order);
-        return status === 'pending' || status === 'partial';
-      }).slice(0, 10); // Show top 10
+      const pendingOrdersList = [];
+      for (const order of orders) {
+        const status = await getOrderStatus(order);
+        if (status === 'pending' || status === 'partial') {
+          pendingOrdersList.push({ order, status });
+          if (pendingOrdersList.length >= 10) break;
+        }
+      }
       
-      pendingOrdersList.forEach(order => {
+      for (const { order, status } of pendingOrdersList) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = getOrderStatus(order);
-        const remainingBoxes = order.lines.reduce((sum, line) => {
-          return sum + computeRemainingForLine(order, line);
-        }, 0);
+        let remainingBoxes = 0;
+        
+        for (const line of order.lines) {
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          remainingBoxes += Math.max(0, line.qty - dispatched);
+        }
         
         reportHTML += `
           <tr>
@@ -1745,7 +1771,7 @@
             </td>
           </tr>
         `;
-      });
+      }
       
       if (pendingOrdersList.length === 0) {
         reportHTML += `
@@ -1825,7 +1851,6 @@
       
       const recentCompleted = orders
         .filter(order => {
-          if (getOrderStatus(order) !== 'completed') return false;
           if (!order.completed_at) return false;
           return new Date(order.completed_at) >= thirtyDaysAgo;
         })
@@ -1892,21 +1917,30 @@
       const orders = await read("orders");
       const customers = await read("customers");
       const products = await read("products");
-      window.dispatchesData = await read("dispatches");
+      const dispatches = await read("dispatches");
       
       // Update report stats
       const totalOrders = orders.length;
-      const completedOrders = orders.filter(order => getOrderStatus(order) === 'completed').length;
-      const pendingOrders = orders.filter(order => {
-        const status = getOrderStatus(order);
-        return status === 'pending' || status === 'partial';
-      }).length;
+      let completedOrders = 0;
+      let pendingOrders = 0;
       
-      const totalRemainingBoxes = orders.reduce((sum, order) => {
-        return sum + order.lines.reduce((lineSum, line) => {
-          return lineSum + computeRemainingForLine(order, line);
-        }, 0);
-      }, 0);
+      for (const order of orders) {
+        const status = await getOrderStatus(order);
+        if (status === 'completed') {
+          completedOrders++;
+        } else {
+          pendingOrders++;
+        }
+      }
+      
+      let totalRemainingBoxes = 0;
+      for (const order of orders) {
+        for (const line of order.lines) {
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          totalRemainingBoxes += Math.max(0, line.qty - dispatched);
+        }
+      }
       
       document.getElementById('reportPendingOrders').textContent = pendingOrders;
       document.getElementById('reportCompletedOrders').textContent = completedOrders;
@@ -1926,12 +1960,16 @@
       }
       
       let summaryHTML = '';
-      todaysOrders.forEach(order => {
+      for (const order of todaysOrders) {
         const customer = customers.find(c => c.id === order.customer_id) || {};
-        const status = getOrderStatus(order);
-        const remainingBoxes = order.lines.reduce((sum, line) => {
-          return sum + computeRemainingForLine(order, line);
-        }, 0);
+        const status = await getOrderStatus(order);
+        
+        let remainingBoxes = 0;
+        for (const line of order.lines) {
+          const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+          const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+          remainingBoxes += Math.max(0, line.qty - dispatched);
+        }
         
         summaryHTML += `
           <div class="card" style="padding: 12px; margin-bottom: 8px; border-left: 3px solid ${status === 'completed' ? '#059669' : '#d97706'}">
@@ -1947,7 +1985,7 @@
             </div>
           </div>
         `;
-      });
+      }
       
       container.innerHTML = summaryHTML;
       
@@ -1959,7 +1997,6 @@
       const orders = await read("orders");
       const customers = await read("customers");
       const products = await read("products");
-      window.dispatchesData = await read("dispatches");
       
       const partyStats = {};
       orders.forEach(order => {
@@ -2019,18 +2056,23 @@
       const orders = await read("orders");
       const customers = await read("customers");
       const products = await read("products");
-      window.dispatchesData = await read("dispatches");
+      const dispatches = await read("dispatches");
       
-      const pendingOrders = orders.filter(order => {
-        const status = getOrderStatus(order);
-        return status === 'pending' || status === 'partial';
-      });
+      let pendingOrders = 0;
+      let totalRemaining = 0;
       
-      const totalRemaining = pendingOrders.reduce((sum, order) => {
-        return sum + order.lines.reduce((lineSum, line) => {
-          return lineSum + computeRemainingForLine(order, line);
-        }, 0);
-      }, 0);
+      for (const order of orders) {
+        const status = await getOrderStatus(order);
+        if (status === 'pending' || status === 'partial') {
+          pendingOrders++;
+          
+          for (const line of order.lines) {
+            const lineDispatches = dispatches.filter(d => d.order_id === order.id && d.order_line_id === line.id);
+            const dispatched = lineDispatches.reduce((sum, d) => sum + Number(d.dispatched_boxes), 0);
+            totalRemaining += Math.max(0, line.qty - dispatched);
+          }
+        }
+      }
       
       const summaryBox = document.getElementById('summaryBox');
       summaryBox.innerHTML = `
@@ -2041,7 +2083,7 @@
           </div>
           <div class="card" style="background: #f8fafc; padding: 16px;">
             <div class="text-muted">Pending Orders</div>
-            <div style="font-size: 24px; font-weight: 700; color: var(--warning);">${pendingOrders.length}</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--warning);">${pendingOrders}</div>
           </div>
           <div class="card" style="background: #f8fafc; padding: 16px;">
             <div class="text-muted">Remaining Boxes</div>
