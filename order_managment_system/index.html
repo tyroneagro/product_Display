@@ -19,7 +19,8 @@
       projectId: "tyrone-oms",
       storageBucket: "tyrone-oms.firebasestorage.app",
       messagingSenderId: "494239566320",
-      appId: "1:494239566320:web:9f44f2da4c8f00f7e9b535"
+      appId: "1:494239566320:web:228c45fb1b67e80de9b535",
+      measurementId: "G-1PCRE0LTWF"
     };
     
     // Initialize Firebase
@@ -2374,7 +2375,7 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
       }
     }
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const username = document.getElementById('loginUsername').value.trim();
       const password = document.getElementById('loginPassword').value;
@@ -2393,7 +2394,6 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
         // Local user authentication successful
         APP.currentUser = { username: user.username, role: user.role, uid: 'local_' + user.username };
         APP.isFirebaseUser = false;
-        localStorage.setItem('tyrone_currentUser', JSON.stringify(APP.currentUser));
         
         // Try to also authenticate with Firebase for cloud sync
         tryFirebaseLogin(username, password).catch(err => {
@@ -2404,8 +2404,8 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
         document.getElementById('loginPage').classList.add('hidden-page');
         document.getElementById('appPage').classList.remove('hidden-page');
         
-        // Initialize app
-        initialize();
+        // Initialize app (now async - loads from Firestore)
+        await initialize();
       } else {
         errorDiv.textContent = 'Invalid username or password';
         errorDiv.style.display = 'block';
@@ -2704,21 +2704,26 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
       }
     }
 
-    function saveToStorage() {
-      localStorage.setItem('tyrone_customers', JSON.stringify(APP.customers));
-      localStorage.setItem('tyrone_products', JSON.stringify(APP.products));
-      localStorage.setItem('tyrone_orders', JSON.stringify(APP.orders));
-      localStorage.setItem('tyrone_dispatches', JSON.stringify(APP.dispatches));
-      localStorage.setItem('tyrone_formulations', JSON.stringify(APP.formulations));
-      // ===== NEW: SAVE PACKING & INVENTORY =====
-      localStorage.setItem('tyrone_packingRecords', JSON.stringify(APP.packingRecords));
-      localStorage.setItem('tyrone_boxInventory', JSON.stringify(APP.boxInventory));
-      localStorage.setItem('tyrone_bulkInventory', JSON.stringify(APP.bulkInventory));
-      localStorage.setItem('tyrone_inventoryDispatchRecords', JSON.stringify(APP.inventoryDispatchRecords));
-      localStorage.setItem('tyrone_inventoryUsedInOrders', JSON.stringify(APP.inventoryUsedInOrders));
-      
-      // Sync to Firebase in background (non-blocking)
-      saveToStorageWithFirebase().catch(err => console.warn('Firebase sync skipped:', err));
+    async function saveToStorage() {
+      // Save to Firestore only (no localStorage)
+      try {
+        await Promise.all([
+          saveToFirestore('customers', APP.customers),
+          saveToFirestore('products', APP.products),
+          saveToFirestore('orders', APP.orders),
+          saveToFirestore('dispatches', APP.dispatches),
+          saveToFirestore('formulations', APP.formulations),
+          saveToFirestore('packingRecords', APP.packingRecords),
+          saveToFirestore('boxInventory', APP.boxInventory),
+          saveToFirestore('bulkInventory', APP.bulkInventory),
+          saveToFirestore('inventoryDispatchRecords', APP.inventoryDispatchRecords),
+          saveToFirestore('inventoryUsedInOrders', APP.inventoryUsedInOrders)
+        ]);
+        console.log('Data saved to Firestore successfully');
+      } catch (err) {
+        console.error('Error saving to Firestore:', err);
+        showToast('Error saving data: ' + err.message, 'error');
+      }
     }
 
     function showToast(message, type = 'success') {
@@ -6044,47 +6049,47 @@ const filteredOrders = APP.orders.filter(order => {
 
 
     // ===== INITIALIZATION =====
-    function initialize() {
-      // Load data from localStorage
-      if (localStorage.getItem('tyrone_customers')) {
-        APP.customers = JSON.parse(localStorage.getItem('tyrone_customers'));
-      }
-      
-      // DELETE ALL PRODUCTS AND ORDERS: Only load customers (parties)
-      APP.products = [];
-      APP.orders = [];
-      localStorage.setItem('tyrone_products', JSON.stringify([]));
-      localStorage.setItem('tyrone_orders', JSON.stringify([]));
-      
-      if (localStorage.getItem('tyrone_dispatches')) {
-        APP.dispatches = JSON.parse(localStorage.getItem('tyrone_dispatches'));
-      }
-
-      if (localStorage.getItem('tyrone_formulations')) {
-        APP.formulations = JSON.parse(localStorage.getItem('tyrone_formulations'));
-      }
-      
-      // ===== NEW: LOAD PACKING & INVENTORY DATA =====
-      if (localStorage.getItem('tyrone_packingRecords')) {
-        APP.packingRecords = JSON.parse(localStorage.getItem('tyrone_packingRecords'));
-      }
-      
-      if (localStorage.getItem('tyrone_boxInventory')) {
-        APP.boxInventory = JSON.parse(localStorage.getItem('tyrone_boxInventory'));
-      }
-      
-      if (localStorage.getItem('tyrone_bulkInventory')) {
-        APP.bulkInventory = JSON.parse(localStorage.getItem('tyrone_bulkInventory'));
-      }
-      
-      // ===== NEW: Load inventory dispatch records =====
-      if (localStorage.getItem('tyrone_inventoryDispatchRecords')) {
-        APP.inventoryDispatchRecords = JSON.parse(localStorage.getItem('tyrone_inventoryDispatchRecords'));
-      }
-      
-      // ===== NEW: Load inventory used in orders =====
-      if (localStorage.getItem('tyrone_inventoryUsedInOrders')) {
-        APP.inventoryUsedInOrders = JSON.parse(localStorage.getItem('tyrone_inventoryUsedInOrders'));
+    async function initialize() {
+      // Load data from Firestore only
+      try {
+        const [customers, products, orders, dispatches, formulations, packingRecords, boxInventory, bulkInventory, inventoryDispatchRecords, inventoryUsedInOrders] = await Promise.all([
+          loadFromFirestore('customers'),
+          loadFromFirestore('products'),
+          loadFromFirestore('orders'),
+          loadFromFirestore('dispatches'),
+          loadFromFirestore('formulations'),
+          loadFromFirestore('packingRecords'),
+          loadFromFirestore('boxInventory'),
+          loadFromFirestore('bulkInventory'),
+          loadFromFirestore('inventoryDispatchRecords'),
+          loadFromFirestore('inventoryUsedInOrders')
+        ]);
+        
+        APP.customers = customers || [];
+        APP.products = products || [];
+        APP.orders = orders || [];
+        APP.dispatches = dispatches || [];
+        APP.formulations = formulations || [];
+        APP.packingRecords = packingRecords || [];
+        APP.boxInventory = boxInventory || [];
+        APP.bulkInventory = bulkInventory || [];
+        APP.inventoryDispatchRecords = inventoryDispatchRecords || [];
+        APP.inventoryUsedInOrders = inventoryUsedInOrders || [];
+        
+        console.log('Data loaded from Firestore successfully');
+      } catch (err) {
+        console.warn('Error loading from Firestore, using empty data:', err);
+        // Initialize with empty arrays if Firestore fails
+        APP.customers = [];
+        APP.products = [];
+        APP.orders = [];
+        APP.dispatches = [];
+        APP.formulations = [];
+        APP.packingRecords = [];
+        APP.boxInventory = [];
+        APP.bulkInventory = [];
+        APP.inventoryDispatchRecords = [];
+        APP.inventoryUsedInOrders = [];
       }
       
       // STEP 1: Ensure all products have technical_name (backward compatibility migration)
