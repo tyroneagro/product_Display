@@ -2589,45 +2589,44 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
     async function saveToFirestore(collectionName, data) {
       try {
         if (!window.firebase || !window.firebase.db) {
-          console.warn('Firebase not initialized, falling back to localStorage');
+          console.warn('Firebase not initialized');
           return false;
         }
         
-        const { setDoc, doc, writeBatch, collection } = window.firebase;
+        const { setDoc, doc, writeBatch, collection, deleteDoc, getDocs, query } = window.firebase;
         const db = window.firebase.db;
-        const userId = APP.currentUser?.uid || 'default_user';
+        const userId = APP.currentUser?.uid || 'anonymous';
         
         // Use batch write for better performance
         const batch = writeBatch(db);
         
         if (Array.isArray(data)) {
-          // For arrays, use collection with individual documents
-          const colRef = collection(db, userId, 'workspace', collectionName);
+          // For arrays, save to collection path: /users/{userId}/{collectionName}/{docId}
+          const colRef = collection(db, 'users', userId, collectionName);
           
-          // Clear existing documents first
+          // Delete old documents first (to clean up)
           try {
-            const { query, where, getDocs } = window.firebase;
-            const q = query(colRef);
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(colRef);
             querySnapshot.forEach((doc) => {
               batch.delete(doc.ref);
             });
           } catch (e) {
-            console.log('First time creating collection:', collectionName);
+            console.log('Creating new collection:', collectionName);
           }
           
           // Add new documents
-          data.forEach((item, index) => {
-            const docRef = doc(db, userId, 'workspace', collectionName, item.id || `item_${index}`);
+          data.forEach((item) => {
+            const itemId = item.id || Math.random().toString(36).substr(2, 9);
+            const docRef = doc(db, 'users', userId, collectionName, itemId);
             batch.set(docRef, {
               ...item,
-              createdAt: new Date().toISOString(),
+              id: itemId,
               updatedAt: new Date().toISOString()
             });
           });
         } else {
-          // For single objects, use document
-          const docRef = doc(db, userId, 'workspace', collectionName, 'data');
+          // For single objects
+          const docRef = doc(db, 'users', userId, collectionName, 'main');
           batch.set(docRef, {
             ...data,
             updatedAt: new Date().toISOString()
@@ -2635,11 +2634,11 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
         }
         
         await batch.commit();
-        console.log(`✓ Saved ${collectionName} to Firestore`);
+        console.log(`✓ Saved ${collectionName} (${Array.isArray(data) ? data.length : 1} items) to Firestore`);
         return true;
       } catch (error) {
         console.error('Firestore save error:', error);
-        showToast(`Error saving ${collectionName} to cloud`, 'error');
+        showToast(`Error saving ${collectionName}: ${error.message}`, 'error');
         return false;
       }
     }
@@ -2649,27 +2648,26 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
       try {
         if (!window.firebase || !window.firebase.db) {
           console.warn('Firebase not initialized');
-          return null;
+          return [];
         }
         
-        const { getDocs, collection, query } = window.firebase;
+        const { getDocs, collection } = window.firebase;
         const db = window.firebase.db;
-        const userId = APP.currentUser?.uid || 'default_user';
+        const userId = APP.currentUser?.uid || 'anonymous';
         
-        const colRef = collection(db, userId, 'workspace', collectionName);
-        const q = query(colRef);
-        const querySnapshot = await getDocs(q);
+        const colRef = collection(db, 'users', userId, collectionName);
+        const querySnapshot = await getDocs(colRef);
         
         const data = [];
         querySnapshot.forEach((doc) => {
           data.push(doc.data());
         });
         
-        console.log(`✓ Loaded ${collectionName} from Firestore:`, data.length, 'items');
+        console.log(`✓ Loaded ${collectionName} from Firestore: ${data.length} items`);
         return data;
       } catch (error) {
-        console.error('Firestore load error:', error);
-        return null;
+        console.warn(`Could not load ${collectionName}:`, error.message);
+        return [];
       }
     }
     
