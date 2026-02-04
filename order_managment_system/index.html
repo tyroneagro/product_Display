@@ -2589,13 +2589,15 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
     async function saveToFirestore(collectionName, data) {
       try {
         if (!window.firebase || !window.firebase.db) {
-          console.warn('Firebase not initialized');
+          console.warn('Firebase not initialized - cannot save', collectionName);
           return false;
         }
         
-        const { setDoc, doc, writeBatch, collection, deleteDoc, getDocs, query } = window.firebase;
+        const { doc, writeBatch, collection, getDocs } = window.firebase;
         const db = window.firebase.db;
         const userId = APP.currentUser?.uid || 'anonymous';
+        
+        console.log(`Saving ${collectionName} (${Array.isArray(data) ? data.length : 1} items) as user: ${userId}`);
         
         // Use batch write for better performance
         const batch = writeBatch(db);
@@ -2607,11 +2609,13 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
           // Delete old documents first (to clean up)
           try {
             const querySnapshot = await getDocs(colRef);
+            console.log(`Deleting ${querySnapshot.size} old ${collectionName} documents`);
             querySnapshot.forEach((doc) => {
               batch.delete(doc.ref);
             });
           } catch (e) {
-            console.log('Creating new collection:', collectionName);
+            // Expected on first save - collection doesn't exist yet
+            console.log(`New collection, creating: ${collectionName}`);
           }
           
           // Add new documents
@@ -2634,10 +2638,10 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
         }
         
         await batch.commit();
-        console.log(`✓ Saved ${collectionName} (${Array.isArray(data) ? data.length : 1} items) to Firestore`);
+        console.log(`✓ Saved ${collectionName} (${Array.isArray(data) ? data.length : 1} items)`);
         return true;
       } catch (error) {
-        console.error('Firestore save error:', error);
+        console.error(`Firestore save error for ${collectionName}:`, error.code, error.message);
         showToast(`Error saving ${collectionName}: ${error.message}`, 'error');
         return false;
       }
@@ -2702,8 +2706,9 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
       }
     }
 
-    async function saveToStorage() {
-      // Save to Firestore only (no localStorage)
+    // Async save function - use this for priority saves
+    async function saveToStorageAsync() {
+      // Save to Firestore only (NO localStorage)
       try {
         await Promise.all([
           saveToFirestore('customers', APP.customers),
@@ -2717,11 +2722,19 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
           saveToFirestore('inventoryDispatchRecords', APP.inventoryDispatchRecords),
           saveToFirestore('inventoryUsedInOrders', APP.inventoryUsedInOrders)
         ]);
-        console.log('Data saved to Firestore successfully');
+        console.log('✓ All data saved to Firestore');
+        return true;
       } catch (err) {
         console.error('Error saving to Firestore:', err);
         showToast('Error saving data: ' + err.message, 'error');
+        return false;
       }
+    }
+
+    // Non-async wrapper - save in background without waiting
+    function saveToStorage() {
+      // Save in background (don't wait for completion)
+      saveToStorageAsync().catch(err => console.error('Background save failed:', err));
     }
 
     function showToast(message, type = 'success') {
@@ -6048,8 +6061,10 @@ const filteredOrders = APP.orders.filter(order => {
 
     // ===== INITIALIZATION =====
     async function initialize() {
-      // Load data from Firestore only
+      // Load data from Firestore first, then fallback to localStorage
       try {
+        console.log('Loading data from Firestore for user:', APP.currentUser?.uid);
+        
         const [customers, products, orders, dispatches, formulations, packingRecords, boxInventory, bulkInventory, inventoryDispatchRecords, inventoryUsedInOrders] = await Promise.all([
           loadFromFirestore('customers'),
           loadFromFirestore('products'),
@@ -6063,31 +6078,54 @@ const filteredOrders = APP.orders.filter(order => {
           loadFromFirestore('inventoryUsedInOrders')
         ]);
         
-        APP.customers = customers || [];
-        APP.products = products || [];
-        APP.orders = orders || [];
-        APP.dispatches = dispatches || [];
-        APP.formulations = formulations || [];
-        APP.packingRecords = packingRecords || [];
-        APP.boxInventory = boxInventory || [];
-        APP.bulkInventory = bulkInventory || [];
-        APP.inventoryDispatchRecords = inventoryDispatchRecords || [];
-        APP.inventoryUsedInOrders = inventoryUsedInOrders || [];
+        APP.customers = customers && customers.length > 0 ? customers : [];
+        APP.products = products && products.length > 0 ? products : [];
+        APP.orders = orders && orders.length > 0 ? orders : [];
+        APP.dispatches = dispatches && dispatches.length > 0 ? dispatches : [];
+        APP.formulations = formulations && formulations.length > 0 ? formulations : [];
+        APP.packingRecords = packingRecords && packingRecords.length > 0 ? packingRecords : [];
+        APP.boxInventory = boxInventory && boxInventory.length > 0 ? boxInventory : [];
+        APP.bulkInventory = bulkInventory && bulkInventory.length > 0 ? bulkInventory : [];
+        APP.inventoryDispatchRecords = inventoryDispatchRecords && inventoryDispatchRecords.length > 0 ? inventoryDispatchRecords : [];
+        APP.inventoryUsedInOrders = inventoryUsedInOrders && inventoryUsedInOrders.length > 0 ? inventoryUsedInOrders : [];
         
-        console.log('Data loaded from Firestore successfully');
+        console.log('✓ Data loaded from Firestore successfully');
       } catch (err) {
-        console.warn('Error loading from Firestore, using empty data:', err);
-        // Initialize with empty arrays if Firestore fails
-        APP.customers = [];
-        APP.products = [];
-        APP.orders = [];
-        APP.dispatches = [];
-        APP.formulations = [];
-        APP.packingRecords = [];
-        APP.boxInventory = [];
-        APP.bulkInventory = [];
-        APP.inventoryDispatchRecords = [];
-        APP.inventoryUsedInOrders = [];
+        console.warn('Error loading from Firestore, trying localStorage backup:', err.message);
+        
+        // Fallback to localStorage
+        try {
+          APP.customers = localStorage.getItem('tyrone_customers') ? JSON.parse(localStorage.getItem('tyrone_customers')) : [];
+          APP.products = localStorage.getItem('tyrone_products') ? JSON.parse(localStorage.getItem('tyrone_products')) : [];
+          APP.orders = localStorage.getItem('tyrone_orders') ? JSON.parse(localStorage.getItem('tyrone_orders')) : [];
+          APP.dispatches = localStorage.getItem('tyrone_dispatches') ? JSON.parse(localStorage.getItem('tyrone_dispatches')) : [];
+          APP.formulations = localStorage.getItem('tyrone_formulations') ? JSON.parse(localStorage.getItem('tyrone_formulations')) : [];
+          APP.packingRecords = localStorage.getItem('tyrone_packingRecords') ? JSON.parse(localStorage.getItem('tyrone_packingRecords')) : [];
+          APP.boxInventory = localStorage.getItem('tyrone_boxInventory') ? JSON.parse(localStorage.getItem('tyrone_boxInventory')) : [];
+          APP.bulkInventory = localStorage.getItem('tyrone_bulkInventory') ? JSON.parse(localStorage.getItem('tyrone_bulkInventory')) : [];
+          APP.inventoryDispatchRecords = localStorage.getItem('tyrone_inventoryDispatchRecords') ? JSON.parse(localStorage.getItem('tyrone_inventoryDispatchRecords')) : [];
+          APP.inventoryUsedInOrders = localStorage.getItem('tyrone_inventoryUsedInOrders') ? JSON.parse(localStorage.getItem('tyrone_inventoryUsedInOrders')) : [];
+          
+          if (APP.customers.length > 0 || APP.orders.length > 0) {
+            console.log('✓ Data restored from localStorage backup');
+            showToast('Data loaded from local cache (Firestore unavailable)', 'info');
+          }
+        } catch (e) {
+          console.error('localStorage backup also failed:', e);
+          showToast('Could not load data - starting fresh', 'warning');
+          
+          // Initialize with empty arrays
+          APP.customers = [];
+          APP.products = [];
+          APP.orders = [];
+          APP.dispatches = [];
+          APP.formulations = [];
+          APP.packingRecords = [];
+          APP.boxInventory = [];
+          APP.bulkInventory = [];
+          APP.inventoryDispatchRecords = [];
+          APP.inventoryUsedInOrders = [];
+        }
       }
       
       // STEP 1: Ensure all products have technical_name (backward compatibility migration)
