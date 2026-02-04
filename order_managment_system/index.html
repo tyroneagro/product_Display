@@ -2393,13 +2393,18 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
       const user = USERS.find(u => u.username === username && u.password === password);
       
       if (user) {
+        console.log('User authenticated locally:', username);
+        
         // Local user authentication successful
         APP.currentUser = { username: user.username, role: user.role, uid: 'local_' + user.username };
         APP.isFirebaseUser = false;
         
+        // Save session to localStorage
+        localStorage.setItem('tyrone_currentUser', JSON.stringify(APP.currentUser));
+        
         // Try to also authenticate with Firebase for cloud sync
         tryFirebaseLogin(username, password).catch(err => {
-          console.log('Firebase login not required for demo');
+          console.log('Firebase login optional, continuing...');
         });
         
         // Hide login page, show app
@@ -2407,10 +2412,18 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
         document.getElementById('appPage').classList.remove('hidden-page');
         
         // Initialize app (now async - loads from Firestore)
-        await initialize();
+        try {
+          console.log('Starting data initialization...');
+          await initialize();
+          console.log('✓ Initialization complete');
+        } catch (err) {
+          console.error('Error during initialization:', err);
+          showToast('Error loading data: ' + err.message, 'error');
+        }
       } else {
         errorDiv.textContent = 'Invalid username or password';
         errorDiv.style.display = 'block';
+        console.warn('Login failed: Invalid credentials');
       }
     }
     
@@ -2652,11 +2665,13 @@ Total Stock (Ltr/Kg) = Available Boxes × Per Box Qty
     }
     
     // Wait for Firebase to be ready
-    async function waitForFirebase(maxWait = 5000) {
+    async function waitForFirebase(maxWait = 2000) {
       const startTime = Date.now();
+      let checked = 0;
       while (!window.firebase || !window.firebase.ready) {
+        checked++;
         if (Date.now() - startTime > maxWait) {
-          console.error('Firebase initialization timeout');
+          console.warn(`Firebase not ready after ${maxWait}ms (checked ${checked} times)`);
           return false;
         }
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -6303,21 +6318,24 @@ if (refreshFormulationBtn) {
 console.log(APP.formulations.map(f => f.technical_name));
 
     // Check if user is already logged in
-    function checkLoginStatus() {
+    async function checkLoginStatus() {
       const savedUser = localStorage.getItem('tyrone_currentUser');
       if (savedUser) {
         try {
           APP.currentUser = JSON.parse(savedUser);
+          console.log('Resuming session for:', APP.currentUser.username);
           document.getElementById('loginPage').classList.add('hidden-page');
           document.getElementById('appPage').classList.remove('hidden-page');
-          initialize();
+          await initialize();
         } catch (e) {
+          console.warn('Could not resume session:', e);
           // Invalid saved user, show login
           APP.currentUser = null;
         }
       }
     }
-console.count('saveFormulationTech');
+
+    console.log('Starting Tyrone Agrochemicals OMS...');
     // Start the application
     checkLoginStatus();
   
